@@ -15,8 +15,11 @@ class MyBLiveClient(BLiveClient):
 
 
 def main():
-    client = MyBLiveClient(6)
-    get_event_loop().run_until_complete(client.start())
+    loop = get_event_loop()
+    client = MyBLiveClient(6, loop)
+    # loop.call_later(5, lambda: client.stop())
+    client.start()
+    loop.close()
 
 
 if __name__ == '__main__':
