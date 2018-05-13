@@ -8,6 +8,7 @@ from enum import IntEnum
 
 import requests
 import websockets
+from websockets.exceptions import ConnectionClosed
 
 
 class Operation(IntEnum):
@@ -47,6 +48,8 @@ class BLiveClient:
             else:
                 self._room_id = res.json()['data']['room_id']
 
+        if self._future is not None:
+            return
         self._future = gather(
             self._message_loop(),
             self._heartbeat_loop()
@@ -71,19 +74,27 @@ class BLiveClient:
         return header + body
 
     async def _message_loop(self):
-        try:
-            # 连接
-            async with websockets.connect(self.WEBSOCKET_URL) as websocket:
-                self._websocket = websocket
-                await self._send_auth()
+        while True:
+            try:
+                # 连接
+                async with websockets.connect(self.WEBSOCKET_URL) as websocket:
+                    self._websocket = websocket
+                    await self._send_auth()
 
-                # 处理消息
-                async for message in websocket:
-                    await self._handle_message(message)
-        except CancelledError:
-            pass
-        finally:
-            self._websocket = None
+                    # 处理消息
+                    async for message in websocket:
+                        await self._handle_message(message)
+
+            except CancelledError:
+                break
+            except ConnectionClosed:
+                self._websocket = None
+                # 重连
+                print('掉线重连中')
+                await sleep(5)
+                continue
+            finally:
+                self._websocket = None
 
     async def _send_auth(self):
         auth_params = {
@@ -96,15 +107,19 @@ class BLiveClient:
         await self._websocket.send(self._make_packet(auth_params, Operation.AUTH))
 
     async def _heartbeat_loop(self):
-        try:
-            while True:
+        while True:
+            try:
                 if self._websocket is None:
                     await sleep(0.5)
                 else:
                     await self._websocket.send(self._make_packet({}, Operation.SEND_HEARTBEAT))
                     await sleep(30)
-        except CancelledError:
-            pass
+
+            except CancelledError:
+                break
+            except ConnectionClosed:
+                # 等待重连
+                continue
 
     async def _handle_message(self, message):
         offset = 0
@@ -125,8 +140,12 @@ class BLiveClient:
                 body = json.loads(body.decode('utf-8'))
                 await self._handle_command(body)
 
-            # elif header.operation == Operation.RECV_HEARTBEAT:
-            #     pass
+            elif header.operation == Operation.RECV_HEARTBEAT:
+                pass
+
+            else:
+                body = message[offset + self.HEADER_STRUCT.size: offset + header.total_len]
+                print('未知包类型：', header, body)
 
             offset += header.total_len
 
@@ -139,25 +158,28 @@ class BLiveClient:
         cmd = command['cmd']
         # print(command)
 
-        if cmd == 'DANMU_MSG':      # 收到弹幕
+        if cmd == 'DANMU_MSG':        # 收到弹幕
             await self._on_get_danmaku(command['info'][1], command['info'][2][1])
 
-        elif cmd == 'SEND_GIFT':    # 送礼物
+        elif cmd == 'SEND_GIFT':      # 送礼物
             pass
 
-        elif cmd == 'WELCOME':      # 欢迎
+        elif cmd == 'WELCOME':        # 欢迎
             pass
 
-        elif cmd == 'SYS_MSG':      # 系统消息
+        elif cmd == 'WELCOME_GUARD':  # 欢迎房管
             pass
 
-        elif cmd == 'PREPARING':    # 房主准备中
+        elif cmd == 'SYS_MSG':        # 系统消息
             pass
 
-        elif cmd == 'LIVE':         # 直播开始
+        elif cmd == 'PREPARING':      # 房主准备中
             pass
 
-        elif cmd == 'WISH_BOTTLE':  # 许愿瓶？
+        elif cmd == 'LIVE':           # 直播开始
+            pass
+
+        elif cmd == 'WISH_BOTTLE':    # 许愿瓶？
             pass
 
         else:
