@@ -26,9 +26,10 @@ class BLiveClient:
     HEADER_STRUCT = struct.Struct('>I2H2I')
     HeaderTuple = namedtuple('HeaderTuple', ('total_len', 'header_len', 'proto_ver', 'operation', 'sequence'))
 
-    def __init__(self, room_id, loop):
+    def __init__(self, room_id, loop=None):
         """
         :param room_id: URL中的房间ID
+        :param loop: 协程事件循环
         """
         self._short_id = room_id
         self._room_id = None
@@ -40,6 +41,14 @@ class BLiveClient:
         self._future = None
 
     def start(self):
+        """
+        创建相关的协程，不会执行事件循环
+        :raise ConnectionError: 获取房间ID失败
+        :return: True表示成功创建协程，False表示之前创建的协程未结束
+        """
+        if self._future is not None:
+            return False
+
         # 获取房间ID
         if self._room_id is None:
             res = requests.get(self.ROOM_INIT_URL, {'id': self._short_id})
@@ -48,19 +57,29 @@ class BLiveClient:
             else:
                 self._room_id = res.json()['data']['room_id']
 
-        if self._future is not None:
-            return
+        # 创建协程
         self._future = gather(
             self._message_loop(),
-            self._heartbeat_loop()
+            self._heartbeat_loop(),
+            loop=self._loop
         )
-        self._loop.run_until_complete(self._future)
 
-    def stop(self):
-        if self._future is None:
+        def on_done(_future):
+            self._future = None
+        self._future.add_done_callback(on_done)
+        return True
+
+    def stop(self, callback=None):
+        """
+        取消相关的协程，不会停止事件循环
+        :param callback: 协程结束后调用
+        """
+        if self._future is None or self._future.cancelled():
             return
+
+        if callback is not None:
+            self._future.add_done_callback(lambda future: callback())
         self._future.cancel()
-        self._future = None
 
     def _make_packet(self, data, operation):
         body = json.dumps(data).encode('utf-8')
@@ -91,7 +110,10 @@ class BLiveClient:
                 self._websocket = None
                 # 重连
                 print('掉线重连中')
-                await sleep(5)
+                try:
+                    await sleep(5)
+                except CancelledError:
+                    break
                 continue
             finally:
                 self._websocket = None
@@ -141,7 +163,7 @@ class BLiveClient:
                 await self._handle_command(body)
 
             elif header.operation == Operation.RECV_HEARTBEAT:
-                pass
+                await self._websocket.send(self._make_packet({}, Operation.SEND_HEARTBEAT))
 
             else:
                 body = message[offset + self.HEADER_STRUCT.size: offset + header.total_len]

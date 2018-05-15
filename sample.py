@@ -16,10 +16,16 @@ class MyBLiveClient(BLiveClient):
 
 def main():
     loop = get_event_loop()
+
     client = MyBLiveClient(6, loop)
-    # loop.call_later(5, lambda: client.stop())
     client.start()
-    loop.close()
+    loop.call_later(5, client.stop, loop.stop)
+
+    try:
+        loop.run_forever()
+    finally:
+        loop.run_until_complete(loop.shutdown_asyncgens())
+        loop.close()
 
 
 if __name__ == '__main__':
