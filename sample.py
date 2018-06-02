@@ -17,9 +17,15 @@ class MyBLiveClient(BLiveClient):
 def main():
     loop = get_event_loop()
 
-    client = MyBLiveClient(6, loop)
+    # 如果SSL验证失败或连接卡死就把第二个参数设为False
+    client = MyBLiveClient(139, True, loop)
     client.start()
-    loop.call_later(5, client.stop, loop.stop)
+
+    # 5秒后停止，测试用
+    # loop.call_later(5, client.stop, loop.stop)
+    # 按Ctrl+C停止
+    # import signal
+    # signal.signal(signal.SIGINT, lambda signum, frame: client.stop(loop.stop))
 
     try:
         loop.run_forever()

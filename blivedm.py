@@ -5,6 +5,8 @@ import struct
 from asyncio import gather, sleep, CancelledError
 from collections import namedtuple
 from enum import IntEnum
+# noinspection PyProtectedMember
+from ssl import _create_unverified_context
 
 import requests
 import websockets
@@ -26,13 +28,15 @@ class BLiveClient:
     HEADER_STRUCT = struct.Struct('>I2H2I')
     HeaderTuple = namedtuple('HeaderTuple', ('total_len', 'header_len', 'proto_ver', 'operation', 'sequence'))
 
-    def __init__(self, room_id, loop=None):
+    def __init__(self, room_id, ssl=True, loop=None):
         """
         :param room_id: URL中的房间ID
+        :param ssl: True表示用默认的SSLContext验证，False表示不验证，也可以传入SSLContext
         :param loop: 协程事件循环
         """
         self._short_id = room_id
         self._room_id = None
+        self._ssl = ssl if ssl else _create_unverified_context()
         self._websocket = None
         # 未登录
         self._uid = 0
@@ -96,7 +100,7 @@ class BLiveClient:
         while True:
             try:
                 # 连接
-                async with websockets.connect(self.WEBSOCKET_URL) as websocket:
+                async with websockets.connect(self.WEBSOCKET_URL, ssl=self._ssl, loop=self._loop) as websocket:
                     self._websocket = websocket
                     await self._send_auth()
 
