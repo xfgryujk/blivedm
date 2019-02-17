@@ -1,12 +1,23 @@
 # -*- coding: utf-8 -*-
 
-from asyncio import get_event_loop
+import asyncio
+from time import time
 from blivedm import DanmuPrinter
+
+async def test1():
+    connection = DanmuPrinter(23058, 0)
+    task_run = asyncio.ensure_future(connection.run_forever())
+    await asyncio.sleep(30)
+    print(time(), 'closing')
+    await connection.close()
+    print(time(), 'closed')
+    await task_run
+    print(time(), 'all done')
 
 
 def main():
-    loop = get_event_loop()
-    loop.run_until_complete(DanmuPrinter(23058, 0).run_forever())
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(test1())
     loop.close()
 
 
