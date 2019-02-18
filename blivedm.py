@@ -159,7 +159,7 @@ class BaseDanmu():
         async with self.lock_for_reseting_roomid_manually:
             # not None是判断是否已经连接了的(重连过程中也可以处理)
             if self.ws is not None:
-                await self.close()
+                await self.close_ws()
             if self.task_main is not None:
                 await self.task_main
             # 由于锁的存在，绝对不可能到达下一个的自动重连状态，这里是保证正确显示当前监控房间号
@@ -169,7 +169,9 @@ class BaseDanmu():
     async def close(self):
         if not self._closed:
             self._closed = True
-            await self.close_ws()
+            async with self.lock_for_reseting_roomid_manually:
+                if self.ws is not None:
+                    await self.close_ws()
             if self._waiting is not None:
                 await self._waiting
             return True
