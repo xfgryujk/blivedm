@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import sys
-from asyncio import get_event_loop
 from ssl import SSLError
 
 from blivedm import BLiveClient
@@ -16,7 +16,12 @@ class MyBLiveClient(BLiveClient):
         print(user_name, '说：', content)
 
     def _on_stop(self, exc):
-        self._loop.stop()
+        # 执行self.close，然后关闭事件循环
+        asyncio.ensure_future(
+            self.close(), loop=self._loop
+        ).add_done_callback(
+            lambda future: self._loop.stop()
+        )
 
     def _handle_error(self, exc):
         print(exc, file=sys.stderr)
@@ -26,8 +31,9 @@ class MyBLiveClient(BLiveClient):
 
 
 def main():
-    loop = get_event_loop()
+    loop = asyncio.get_event_loop()
 
+    # 139是黑桐谷歌的直播间
     # 如果SSL验证失败就把第二个参数设为False
     client = MyBLiveClient(139, True)
     client.start()
@@ -41,7 +47,6 @@ def main():
     try:
         loop.run_forever()
     finally:
-        loop.run_until_complete(loop.shutdown_asyncgens())
         loop.close()
 
 
