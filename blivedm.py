@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 import struct
 import sys
 from collections import namedtuple
@@ -10,6 +11,8 @@ from enum import IntEnum
 from ssl import _create_unverified_context
 
 import aiohttp
+
+logger = logging.getLogger(__name__)
 
 
 class Operation(IntEnum):
@@ -134,13 +137,13 @@ class BLiveClient:
                         if message.type == aiohttp.WSMsgType.BINARY:
                             await self._handle_message(message.data)
                         else:
-                            print('未知的websocket消息：', message.type, message.data)
+                            logger.warning('未知的websocket消息：type=%s %s', message.type, message.data)
 
             except asyncio.CancelledError:
                 break
             except aiohttp.ClientConnectorError:
                 # 重连
-                print('掉线重连中', file=sys.stderr)
+                logger.warning('掉线重连中')
                 try:
                     await asyncio.sleep(5)
                 except asyncio.CancelledError:
@@ -189,7 +192,7 @@ class BLiveClient:
 
             else:
                 body = message[offset + self.HEADER_STRUCT.size: offset + header.total_len]
-                print('未知包类型：', header, body, file=sys.stderr)
+                logger.warning('未知包类型：operation=%d %s%s', header.operation, header, body)
 
             offset += header.total_len
 
@@ -200,34 +203,31 @@ class BLiveClient:
             return
 
         cmd = command['cmd']
-        # print(command)
-
-        if cmd == 'DANMU_MSG':        # 收到弹幕
+        if cmd == 'DANMU_MSG':  # 收到弹幕
             await self._on_get_danmaku(command['info'][1], command['info'][2][1])
-
-        elif cmd == 'SEND_GIFT':      # 送礼物
+        elif cmd in (  # 已知命令，本客户端只处理DANMU_MSG
+            # 从前端扒来的
+            '66FFFF', 'SYS_MSG', 'SYS_GIFT', 'GUARD_MSG', 'SEND_GIFT', 'LIVE',
+            'PREPARING', 'END', 'CLOSE', 'BLOCK', 'ROUND', 'WELCOME', 'REFRESH',
+            'ACTIVITY_RED_PACKET', 'ROOM_LIMIT', 'PK_PRE', 'PK_END', 'PK_SETTLE',
+            'PK_MIC_END', 'live', 'preparing', 'end', 'close', 'block', 'pre-round',
+            'round', 'error', 'player-state-play', 'player-state-pause', 'http:',
+            'https:', 'ws:', 'wss:', 'videoVolume', 'homeVideoVolume', 'div',
+            'canvas', 'initialized', 'playerStateChange', 'liveStateChange',
+            'videoStateChange', 'fullscreenChange', 'playing', 'paused', 'switchLine',
+            'switchQuality', 'webFullscreen', 'feedBackClick', 'blockSettingClick',
+            'set', 'initDanmaku', 'addDanmaku', 'sendDanmaku', 'receiveOnlineCount',
+            'receiveMessage', 'userLogin', 'giftPackageClick', 'sendGift', 'guidChange',
+            'reload', 'danmaku', 'block', 'gift', 'firstLoadedAPIPlayer',
+            'firstLoadedAPIPlayurl', 'firstLoadStart', 'firstLoadedMetaData',
+            'firstPlaying', 'enterTheRoom', 'operableElementsChange',
+            # 其他遇到的
+            'COMBO_SEND', 'COMBO_END', 'ROOM_RANK', 'NOTICE_MSG', 'WELCOME_GUARD',
+            'WISH_BOTTLE', 'RAFFLE_START', 'ENTRY_EFFECT'
+        ):
             pass
-
-        elif cmd == 'WELCOME':        # 欢迎
-            pass
-
-        elif cmd == 'WELCOME_GUARD':  # 欢迎房管
-            pass
-
-        elif cmd == 'SYS_MSG':        # 系统消息
-            pass
-
-        elif cmd == 'PREPARING':      # 房主准备中
-            pass
-
-        elif cmd == 'LIVE':           # 直播开始
-            pass
-
-        elif cmd == 'WISH_BOTTLE':    # 许愿瓶？
-            pass
-
         else:
-            print('未知命令：', command, file=sys.stderr)
+            logger.warning('未知命令：cmd=%s %s', cmd, command)
 
     async def _on_get_popularity(self, popularity):
         """
@@ -241,12 +241,5 @@ class BLiveClient:
         获取到弹幕
         :param content: 弹幕内容
         :param user_name: 弹幕作者
-        """
-        pass
-
-    def _on_stop(self, exc):
-        """
-        协程结束后被调用
-        :param exc: 如果是异常结束则为异常，否则为None
         """
         pass
