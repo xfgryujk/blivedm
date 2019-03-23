@@ -4,7 +4,6 @@ import asyncio
 import json
 import logging
 import struct
-import sys
 from collections import namedtuple
 from enum import IntEnum
 # noinspection PyProtectedMember
@@ -29,6 +28,38 @@ class BLiveClient:
 
     HEADER_STRUCT = struct.Struct('>I2H2I')
     HeaderTuple = namedtuple('HeaderTuple', ('total_len', 'header_len', 'proto_ver', 'operation', 'sequence'))
+
+    _COMMAND_HANDLERS = {
+        # 收到弹幕
+        'DANMU_MSG': lambda client, command: client._on_get_danmaku(
+            command['info'][1], command['info'][2][1]
+        ),
+        # 有人送礼
+        'SEND_GIFT': lambda client, command: client._on_gift(
+            command['data']['giftName'], command['data']['num'], command['data']['uname']
+        )
+    }
+    for cmd in (  # 其他已知命令
+        # 从前端扒来的
+        '66FFFF', 'SYS_MSG', 'SYS_GIFT', 'GUARD_MSG', 'LIVE', 'PREPARING',
+        'END', 'CLOSE', 'BLOCK', 'ROUND', 'WELCOME', 'REFRESH',
+        'ACTIVITY_RED_PACKET', 'ROOM_LIMIT', 'PK_PRE', 'PK_END', 'PK_SETTLE',
+        'PK_MIC_END', 'live', 'preparing', 'end', 'close', 'block', 'pre-round',
+        'round', 'error', 'player-state-play', 'player-state-pause', 'http:',
+        'https:', 'ws:', 'wss:', 'videoVolume', 'homeVideoVolume', 'div',
+        'canvas', 'initialized', 'playerStateChange', 'liveStateChange',
+        'videoStateChange', 'fullscreenChange', 'playing', 'paused', 'switchLine',
+        'switchQuality', 'webFullscreen', 'feedBackClick', 'blockSettingClick',
+        'set', 'initDanmaku', 'addDanmaku', 'sendDanmaku', 'receiveOnlineCount',
+        'receiveMessage', 'userLogin', 'giftPackageClick', 'sendGift', 'guidChange',
+        'reload', 'danmaku', 'block', 'gift', 'firstLoadedAPIPlayer',
+        'firstLoadedAPIPlayurl', 'firstLoadStart', 'firstLoadedMetaData',
+        'firstPlaying', 'enterTheRoom', 'operableElementsChange',
+        # 其他遇到的
+        'COMBO_SEND', 'COMBO_END', 'ROOM_RANK', 'NOTICE_MSG', 'WELCOME_GUARD',
+        'WISH_BOTTLE', 'RAFFLE_START', 'ENTRY_EFFECT', 'ROOM_REAL_TIME_MESSAGE_UPDATE'
+    ):
+        _COMMAND_HANDLERS[cmd] = None
 
     def __init__(self, room_id, ssl=True, loop=None, session: aiohttp.ClientSession=None,
                  uid=0):
@@ -203,29 +234,10 @@ class BLiveClient:
             return
 
         cmd = command['cmd']
-        if cmd == 'DANMU_MSG':  # 收到弹幕
-            await self._on_get_danmaku(command['info'][1], command['info'][2][1])
-        elif cmd in (  # 已知命令，本客户端只处理DANMU_MSG
-            # 从前端扒来的
-            '66FFFF', 'SYS_MSG', 'SYS_GIFT', 'GUARD_MSG', 'SEND_GIFT', 'LIVE',
-            'PREPARING', 'END', 'CLOSE', 'BLOCK', 'ROUND', 'WELCOME', 'REFRESH',
-            'ACTIVITY_RED_PACKET', 'ROOM_LIMIT', 'PK_PRE', 'PK_END', 'PK_SETTLE',
-            'PK_MIC_END', 'live', 'preparing', 'end', 'close', 'block', 'pre-round',
-            'round', 'error', 'player-state-play', 'player-state-pause', 'http:',
-            'https:', 'ws:', 'wss:', 'videoVolume', 'homeVideoVolume', 'div',
-            'canvas', 'initialized', 'playerStateChange', 'liveStateChange',
-            'videoStateChange', 'fullscreenChange', 'playing', 'paused', 'switchLine',
-            'switchQuality', 'webFullscreen', 'feedBackClick', 'blockSettingClick',
-            'set', 'initDanmaku', 'addDanmaku', 'sendDanmaku', 'receiveOnlineCount',
-            'receiveMessage', 'userLogin', 'giftPackageClick', 'sendGift', 'guidChange',
-            'reload', 'danmaku', 'block', 'gift', 'firstLoadedAPIPlayer',
-            'firstLoadedAPIPlayurl', 'firstLoadStart', 'firstLoadedMetaData',
-            'firstPlaying', 'enterTheRoom', 'operableElementsChange',
-            # 其他遇到的
-            'COMBO_SEND', 'COMBO_END', 'ROOM_RANK', 'NOTICE_MSG', 'WELCOME_GUARD',
-            'WISH_BOTTLE', 'RAFFLE_START', 'ENTRY_EFFECT'
-        ):
-            pass
+        if cmd in self._COMMAND_HANDLERS:
+            handler = self._COMMAND_HANDLERS[cmd]
+            if handler is not None:
+                await handler(self, command)
         else:
             logger.warning('未知命令：cmd=%s %s', cmd, command)
 
@@ -241,5 +253,14 @@ class BLiveClient:
         获取到弹幕
         :param content: 弹幕内容
         :param user_name: 弹幕作者
+        """
+        pass
+
+    async def _on_gift(self, gift_name, gift_num, user_name):
+        """
+        有人送礼
+        :param gift_name: 礼物名
+        :param gift_num: 礼物数
+        :param user_name: 送礼人
         """
         pass

@@ -6,12 +6,21 @@ from blivedm import BLiveClient
 
 
 class MyBLiveClient(BLiveClient):
+    # 演示如何自定义handler
+    _COMMAND_HANDLERS = BLiveClient._COMMAND_HANDLERS.copy()
+    _COMMAND_HANDLERS['SEND_GIFT'] = lambda client, command: client._my_on_gift(
+        command['data']['giftName'], command['data']['num'], command['data']['uname'],
+        command['data']['coin_type'], command['data']['total_coin']
+    )
 
     async def _on_get_popularity(self, popularity):
-        print('当前人气值：', popularity)
+        print(f'当前人气值：{popularity}')
 
     async def _on_get_danmaku(self, content, user_name):
-        print(user_name, '说：', content)
+        print(f'{user_name}：{content}')
+
+    async def _my_on_gift(self, gift_name, gift_num, user_name, coin_type, total_coin):
+        print(f'{user_name} 赠送{gift_name}x{gift_num} （{coin_type}币x{total_coin}）')
 
 
 async def async_main():
