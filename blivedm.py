@@ -172,7 +172,7 @@ class BLiveClient:
 
             except asyncio.CancelledError:
                 break
-            except aiohttp.ClientConnectorError:
+            except (aiohttp.ClientConnectorError, asyncio.TimeoutError):
                 # 重连
                 logger.warning('掉线重连中')
                 try:
