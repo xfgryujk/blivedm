@@ -59,22 +59,11 @@ class BLiveClient:
     }
     for cmd in (  # 其他已知命令
         # 从前端扒来的
-        '66FFFF', 'SYS_MSG', 'SYS_GIFT', 'GUARD_MSG', 'LIVE', 'PREPARING',
-        'END', 'CLOSE', 'BLOCK', 'ROUND', 'WELCOME', 'REFRESH',
-        'ACTIVITY_RED_PACKET', 'ROOM_LIMIT', 'PK_PRE', 'PK_END', 'PK_SETTLE',
-        'PK_MIC_END', 'live', 'preparing', 'end', 'close', 'block', 'pre-round',
-        'round', 'error', 'player-state-play', 'player-state-pause', 'http:',
-        'https:', 'ws:', 'wss:', 'videoVolume', 'homeVideoVolume', 'div',
-        'canvas', 'initialized', 'playerStateChange', 'liveStateChange',
-        'videoStateChange', 'fullscreenChange', 'playing', 'paused', 'switchLine',
-        'switchQuality', 'webFullscreen', 'feedBackClick', 'blockSettingClick',
-        'set', 'initDanmaku', 'addDanmaku', 'sendDanmaku', 'receiveOnlineCount',
-        'receiveMessage', 'userLogin', 'giftPackageClick', 'sendGift', 'guidChange',
-        'reload', 'danmaku', 'block', 'gift', 'firstLoadedAPIPlayer',
-        'firstLoadedAPIPlayurl', 'firstLoadStart', 'firstLoadedMetaData',
-        'firstPlaying', 'enterTheRoom', 'operableElementsChange',
+        '66FFFF', 'SYS_MSG', 'SYS_GIFT', 'GUARD_MSG', 'LIVE', 'PREPARING', 'END', 'CLOSE',
+        'BLOCK', 'ROUND', 'WELCOME', 'REFRESH', 'ACTIVITY_RED_PACKET', 'ROOM_LIMIT',
+        'PK_PRE', 'PK_END', 'PK_SETTLE', 'PK_MIC_END',
         # 其他遇到的
-        'COMBO_SEND', 'COMBO_END', 'ROOM_RANK', 'NOTICE_MSG', 'WELCOME_GUARD',
+        'COMBO_SEND', 'COMBO_END', 'ROOM_RANK', 'NOTICE_MSG', 'WELCOME_GUARD', 'GUARD_BUY',
         'WISH_BOTTLE', 'RAFFLE_START', 'ENTRY_EFFECT', 'ROOM_REAL_TIME_MESSAGE_UPDATE'
     ):
         _COMMAND_HANDLERS[cmd] = None
@@ -252,6 +241,9 @@ class BLiveClient:
             return
 
         cmd = command['cmd']
+        pos = cmd.find(':')  # 2019-5-29 B站弹幕升级新增了参数
+        if pos != -1:
+            cmd = cmd[:pos]
         if cmd in self._COMMAND_HANDLERS:
             handler = self._COMMAND_HANDLERS[cmd]
             if handler is not None:
