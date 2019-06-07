@@ -373,12 +373,14 @@ class BLiveClient:
         if self._room_id is None:
             await self.init_room()
 
+        retry_count = 0
         while True:
             heartbeat_future = None
             try:
                 # 连接
                 async with self._session.ws_connect(WEBSOCKET_URL,
                                                     ssl=self._ssl) as websocket:
+                    retry_count = 0
                     self._websocket = websocket
                     await self._send_auth()
                     heartbeat_future = asyncio.ensure_future(self._heartbeat_loop(), loop=self._loop)
@@ -395,11 +397,7 @@ class BLiveClient:
                 break
             except (aiohttp.ClientConnectorError, asyncio.TimeoutError):
                 # 重连
-                logger.warning('room %d 掉线重连中', self.room_id)
-                # try:
-                #     await asyncio.sleep(5)
-                # except asyncio.CancelledError:
-                #     break
+                pass
             finally:
                 if heartbeat_future is not None:
                     heartbeat_future.cancel()
@@ -408,6 +406,13 @@ class BLiveClient:
                     except asyncio.CancelledError:
                         break
                 self._websocket = None
+
+            retry_count += 1
+            logger.warning('room %d 掉线重连中%d', self.room_id, retry_count)
+            try:
+                await asyncio.sleep(1)
+            except asyncio.CancelledError:
+                break
 
         self._future = None
 
