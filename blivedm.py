@@ -3,11 +3,10 @@
 import asyncio
 import json
 import logging
+import ssl as ssl_
 import struct
 from collections import namedtuple
 from enum import IntEnum
-# noinspection PyProtectedMember
-from ssl import _create_unverified_context
 from typing import *
 
 import aiohttp
@@ -232,14 +231,17 @@ class BLiveClient:
         )
     }
     for cmd in (  # 其他已知命令
-        # 从前端扒来的
-        '66FFFF', 'SYS_MSG', 'SYS_GIFT', 'GUARD_MSG', 'LIVE', 'PREPARING', 'END', 'CLOSE',
+        'SYS_MSG', 'SYS_GIFT', 'GUARD_MSG', 'LIVE', 'PREPARING', 'END', 'CLOSE',
         'BLOCK', 'ROUND', 'WELCOME', 'REFRESH', 'ACTIVITY_RED_PACKET', 'ROOM_LIMIT',
-        'PK_PRE', 'PK_END', 'PK_SETTLE', 'PK_MIC_END',
-        # 其他遇到的
-        'COMBO_SEND', 'COMBO_END', 'ROOM_RANK', 'NOTICE_MSG', 'WELCOME_GUARD',
+        'PK_MATCH', 'PK_PRE', 'PK_START', 'PK_PROCESS', 'PK_END', 'PK_SETTLE', 'PK_MIC_END',
+        'PK_AGAIN', 'COMBO_SEND', 'COMBO_END', 'ROOM_RANK', 'NOTICE_MSG', 'WELCOME_GUARD',
         'WISH_BOTTLE', 'RAFFLE_START', 'ENTRY_EFFECT', 'ROOM_REAL_TIME_MESSAGE_UPDATE',
-        'USER_TOAST_MSG', 'GUARD_LOTTERY_START'
+        'USER_TOAST_MSG', 'GUARD_LOTTERY_START', 'ROOM_BLOCK_MSG', 'ACTIVITY_MATCH_GIFT',
+        'CHANGE_ROOM_INFO', 'CUT_OFF', 'WARNING', 'LUCK_GIFT_AWARD_USER',
+        'MESSAGEBOX_USER_GAIN_MEDAL', 'RAFFLE_END', 'ROOM_REFRESH', 'ROOM_SKIN_MSG',
+        'SCORE_CARD', 'TV_START', 'TV_END', 'ROOM_BLOCK_INTO', 'ROOM_KICKOUT', 'ROOM_LOCK',
+        'ROOM_SILENT_ON', 'ROOM_SILENT_OFF', 'SEND_TOP', 'SPECIAL_GIFT', 'WIN_ACTIVITY',
+        'HOUR_RANK_AWARDS', 'LOL_ACTIVITY', 'ROOM_REAL_TIME_MESSAGE_UPDATE'
     ):
         _COMMAND_HANDLERS[cmd] = None
 
@@ -261,6 +263,7 @@ class BLiveClient:
         if loop is not None:
             self._loop = loop
         elif session is not None:
+            # noinspection PyDeprecation
             self._loop = session.loop
         else:
             self._loop = asyncio.get_event_loop()
@@ -272,9 +275,11 @@ class BLiveClient:
         else:
             self._session = session
             self._own_session = False
+            # noinspection PyDeprecation
             if self._session.loop is not self._loop:
                 raise RuntimeError('BLiveClient and session has to use same event loop')
-        self._ssl = ssl if ssl else _create_unverified_context()
+        # noinspection PyProtectedMember
+        self._ssl = ssl if ssl else ssl_._create_unverified_context()
         self._websocket = None
 
     @property
@@ -317,7 +322,16 @@ class BLiveClient:
         if self._future is not None:
             raise RuntimeError('This client is already running')
         self._future = asyncio.ensure_future(self._message_loop(), loop=self._loop)
+        self._future.add_done_callback(self.__on_message_loop_done)
         return self._future
+
+    def __on_message_loop_done(self, future):
+        self._future = None
+        logger.debug('room %s 消息协程结束', self.room_id)
+        exception = future.exception()
+        if exception is not None:
+            logger.exception('room %s 消息协程异常结束：', self.room_id,
+                             exc_info=(type(exception), exception, exception.__traceback__))
 
     def stop(self):
         """
@@ -384,11 +398,17 @@ class BLiveClient:
                     self._websocket = websocket
                     await self._send_auth()
                     heartbeat_future = asyncio.ensure_future(self._heartbeat_loop(), loop=self._loop)
+                    heartbeat_future.add_done_callback(
+                        lambda _future: logger.debug('room %d 心跳循环结束', self.room_id)
+                    )
 
                     # 处理消息
                     async for message in websocket:  # type: aiohttp.WSMessage
                         if message.type == aiohttp.WSMsgType.BINARY:
-                            await self._handle_message(message.data)
+                            try:
+                                await self._handle_message(message.data)
+                            except:
+                                logger.exception('room %d 处理消息时发生错误：', self.room_id)
                         else:
                             logger.warning('room %d 未知的websocket消息：type=%s %s', self.room_id,
                                            message.type, message.data)
@@ -398,6 +418,10 @@ class BLiveClient:
             except (aiohttp.ClientConnectorError, asyncio.TimeoutError):
                 # 重连
                 pass
+            except ssl_.SSLError:
+                logger.exception('SSL错误：')
+                # 证书错误时无法重连
+                break
             finally:
                 if heartbeat_future is not None:
                     heartbeat_future.cancel()
@@ -413,8 +437,6 @@ class BLiveClient:
                 await asyncio.sleep(1)
             except asyncio.CancelledError:
                 break
-
-        self._future = None
 
     async def _heartbeat_loop(self):
         while True:
