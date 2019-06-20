@@ -407,7 +407,12 @@ class BLiveClient:
                         if message.type == aiohttp.WSMsgType.BINARY:
                             try:
                                 await self._handle_message(message.data)
-                            except:
+                            except BaseException as e:
+                                if type(e) in (
+                                    asyncio.CancelledError, aiohttp.ClientConnectorError,
+                                    asyncio.TimeoutError, ssl_.SSLError
+                                ):
+                                    raise
                                 logger.exception('room %d 处理消息时发生错误：', self.room_id)
                         else:
                             logger.warning('room %d 未知的websocket消息：type=%s %s', self.room_id,
