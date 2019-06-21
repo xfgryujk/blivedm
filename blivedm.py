@@ -409,7 +409,7 @@ class BLiveClient:
                                 await self._handle_message(message.data)
                             except BaseException as e:
                                 if type(e) in (
-                                    asyncio.CancelledError, aiohttp.ClientConnectorError,
+                                    asyncio.CancelledError, aiohttp.ClientConnectionError,
                                     asyncio.TimeoutError, ssl_.SSLError
                                 ):
                                     raise
@@ -420,7 +420,7 @@ class BLiveClient:
 
             except asyncio.CancelledError:
                 break
-            except (aiohttp.ClientConnectorError, asyncio.TimeoutError):
+            except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
                 # 重连
                 pass
             except ssl_.SSLError:
