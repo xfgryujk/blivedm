@@ -131,10 +131,10 @@ class DanmakuMessage:
         return cls(
             info[0][1], info[0][2], info[0][3], info[0][4], info[0][5], info[0][7], info[0][9], info[0][10],
             info[1],
-            *info[2],
-            *(info[3] or (0, '', '', 0, 0, 0)),
+            *info[2][:8],
+            *(info[3][:6] or (0, '', '', 0, 0, 0)),
             info[4][0], info[4][2], info[4][3],
-            *info[5],
+            *info[5][:2],
             info[7]
         )
 
