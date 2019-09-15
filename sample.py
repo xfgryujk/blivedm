@@ -28,8 +28,8 @@ class MyBLiveClient(blivedm.BLiveClient):
 
 async def main():
     # 139是黑桐谷歌的直播间
-    # 如果SSL验证失败就把第二个参数设为False
-    client = MyBLiveClient(139, True)
+    # 如果SSL验证失败就把ssl设为False
+    client = MyBLiveClient(139, ssl=True)
     future = client.start()
     try:
         # 5秒后停止，测试用
