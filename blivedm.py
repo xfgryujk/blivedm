@@ -239,12 +239,13 @@ class BLiveClient:
         )
     }
     for cmd in (  # 其他已知命令
-        'ACTIVITY_BANNER_UPDATE_V2', 'ACTIVITY_MATCH_GIFT', 'ACTIVITY_RED_PACKET', 'BLOCK',
-        'CHANGE_ROOM_INFO', 'CLOSE', 'COMBO_END', 'COMBO_SEND', 'CUT_OFF', 'END', 'ENTRY_EFFECT',
-        'GUARD_LOTTERY_START', 'GUARD_MSG', 'GUIARD_MSG', 'HOUR_RANK_AWARDS', 'LIVE',
-        'LOL_ACTIVITY', 'LUCK_GIFT_AWARD_USER', 'MESSAGEBOX_USER_GAIN_MEDAL', 'NOTICE_MSG',
-        'PK_AGAIN', 'PK_END', 'PK_MATCH', 'PK_MIC_END', 'PK_PRE', 'PK_PROCESS', 'PK_SETTLE',
-        'PK_START', 'PREPARING', 'RAFFLE_END', 'RAFFLE_START', 'REFRESH', 'ROOM_BLOCK_INTO',
+        'ACTIVITY_BANNER_RED_NOTICE_CLOSE', 'ACTIVITY_BANNER_UPDATE_V2', 'ACTIVITY_MATCH_GIFT',
+        'ACTIVITY_RED_PACKET', 'BLOCK', 'CHANGE_ROOM_INFO', 'CLOSE', 'COMBO_END', 'COMBO_SEND',
+        'CUT_OFF', 'DAILY_QUEST_NEWDAY', 'END', 'ENTRY_EFFECT', 'GUARD_LOTTERY_START',
+        'GUARD_MSG', 'GUIARD_MSG', 'HOUR_RANK_AWARDS', 'LIVE', 'LOL_ACTIVITY',
+        'LUCK_GIFT_AWARD_USER', 'MESSAGEBOX_USER_GAIN_MEDAL', 'NOTICE_MSG', 'PK_AGAIN',
+        'PK_END', 'PK_MATCH', 'PK_MIC_END', 'PK_PRE', 'PK_PROCESS', 'PK_SETTLE', 'PK_START',
+        'PREPARING', 'RAFFLE_END', 'RAFFLE_START', 'REFRESH', 'ROOM_BLOCK_INTO',
         'ROOM_BLOCK_MSG', 'ROOM_BOX_MASTER', 'ROOM_KICKOUT', 'ROOM_LIMIT', 'ROOM_LOCK',
         'ROOM_RANK', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'ROOM_REAL_TIME_MESSAGE_UPDATE',
         'ROOM_REFRESH', 'ROOM_SHIELD', 'ROOM_SILENT_OFF', 'ROOM_SILENT_ON', 'ROOM_SKIN_MSG',
@@ -549,6 +550,7 @@ class BLiveClient:
                 await handler(self, command)
         else:
             logger.warning('room %d 未知命令：cmd=%s %s', self.room_id, cmd, command)
+            self._COMMAND_HANDLERS[cmd] = None
 
     async def _on_receive_popularity(self, popularity: int):
         """
