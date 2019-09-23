@@ -272,11 +272,12 @@ class SuperChatMessage:
     def from_command(cls, data: dict):
         return cls(
             data['price'], data['message'], data['message_jpn'], data['start_time'],
-            data['end_time'], data['time'], data['id'], data['gift_id'], data['gift_name'],
-            data['uid'], data['user_info']['uname'], data['user_info']['face'],
-            data['user_info']['guard_level'], data['user_info']['user_level'],
-            data['background_bottom_color'], data['background_color'], data['background_icon'],
-            data['background_image'], data['background_price_color']
+            data['end_time'], data['time'], data['id'], data['gift']['gift_id'],
+            data['gift']['gift_name'], data['uid'], data['user_info']['uname'],
+            data['user_info']['face'], data['user_info']['guard_level'],
+            data['user_info']['user_level'], data['background_bottom_color'],
+            data['background_color'], data['background_icon'], data['background_image'],
+            data['background_price_color']
         )
 
 
