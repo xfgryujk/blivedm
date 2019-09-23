@@ -222,6 +222,78 @@ class GuardBuyMessage:
         )
 
 
+class SuperChatMessage:
+    def __init__(self, price, message, message_jpn, start_time, end_time, time, id_,
+                 gift_id, gift_name, uid, uname, face, guard_level, user_level,
+                 background_bottom_color, background_color, background_icon, background_image,
+                 background_price_color):
+        """
+        :param price: 价格（人民币）
+        :param message: 消息
+        :param message_jpn: 消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）
+        :param start_time: 开始时间戳
+        :param end_time: 结束时间戳
+        :param time: 持续时间？
+        :param id_: str，消息ID，删除时用
+        :param gift_id: 礼物ID
+        :param gift_name: 礼物名
+        :param uid: 用户ID
+        :param uname: 用户名
+        :param face: 用户头像URL
+        :param guard_level: 舰队等级，0非舰队，1总督，2提督，3舰长
+        :param user_level: 用户等级
+        :param background_bottom_color: 底部背景色
+        :param background_color: 背景色
+        :param background_icon: 背景图标
+        :param background_image: 背景图
+        :param background_price_color: 背景价格颜色
+        """
+        self.price = price
+        self.message = message
+        self.message_jpn = message_jpn
+        self.start_time = start_time
+        self.end_time = end_time
+        self.time = time
+        self.id = id_
+        self.gift_id = gift_id
+        self.gift_name = gift_name
+        self.uid = uid
+        self.uname = uname
+        self.face = face
+        self.guard_level = guard_level
+        self.user_level = user_level
+        self.background_bottom_color = background_bottom_color
+        self.background_color = background_color
+        self.background_icon = background_icon
+        self.background_image = background_image
+        self.background_price_color = background_price_color
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            data['price'], data['message'], data['message_jpn'], data['start_time'],
+            data['end_time'], data['time'], data['id'], data['gift_id'], data['gift_name'],
+            data['uid'], data['user_info']['uname'], data['user_info']['face'],
+            data['user_info']['guard_level'], data['user_info']['user_level'],
+            data['background_bottom_color'], data['background_color'], data['background_icon'],
+            data['background_image'], data['background_price_color']
+        )
+
+
+class SuperChatDeleteMessage:
+    def __init__(self, ids):
+        """
+        :param ids: 消息ID数组
+        """
+        self.ids = ids
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            data['ids']
+        )
+
+
 class BLiveClient:
     _COMMAND_HANDLERS: Dict[str, Optional[Callable[['BLiveClient', dict], Awaitable]]] = {
         # 收到弹幕
@@ -236,6 +308,14 @@ class BLiveClient:
         # 有人上舰
         'GUARD_BUY': lambda client, command: client._on_buy_guard(
             GuardBuyMessage.from_command(command['data'])
+        ),
+        # 醒目留言
+        'SUPER_CHAT_MESSAGE': lambda client, command: client._on_super_chat(
+            SuperChatMessage.from_command(command['data'])
+        ),
+        # 删除醒目留言
+        'SUPER_CHAT_MESSAGE_DELETE': lambda client, command: client._on_super_chat_delete(
+            SuperChatDeleteMessage.from_command(command['data'])
         )
     }
     for cmd in (  # 其他已知命令
@@ -249,9 +329,9 @@ class BLiveClient:
         'ROOM_BLOCK_MSG', 'ROOM_BOX_MASTER', 'ROOM_KICKOUT', 'ROOM_LIMIT', 'ROOM_LOCK',
         'ROOM_RANK', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'ROOM_REAL_TIME_MESSAGE_UPDATE',
         'ROOM_REFRESH', 'ROOM_SHIELD', 'ROOM_SILENT_OFF', 'ROOM_SILENT_ON', 'ROOM_SKIN_MSG',
-        'ROUND', 'SCORE_CARD', 'SEND_TOP', 'SPECIAL_GIFT', 'SYS_GIFT', 'SYS_MSG', 'TV_END',
-        'TV_START', 'USER_TOAST_MSG', 'WARNING', 'WEEK_STAR_CLOCK', 'WELCOME', 'WELCOME_GUARD',
-        'WIN_ACTIVITY', 'WISH_BOTTLE'
+        'ROUND', 'SCORE_CARD', 'SEND_TOP', 'SPECIAL_GIFT', 'SUPER_CHAT_ENTRANCE',
+        'SUPER_CHAT_MESSAGE_JPN', 'SYS_GIFT', 'SYS_MSG', 'TV_END', 'TV_START', 'USER_TOAST_MSG',
+        'WARNING', 'WEEK_STAR_CLOCK', 'WELCOME', 'WELCOME_GUARD', 'WIN_ACTIVITY', 'WISH_BOTTLE'
     ):
         _COMMAND_HANDLERS[cmd] = None
 
@@ -573,5 +653,17 @@ class BLiveClient:
     async def _on_buy_guard(self, message: GuardBuyMessage):
         """
         有人上舰
+        """
+        pass
+
+    async def _on_super_chat(self, message: SuperChatMessage):
+        """
+        醒目留言
+        """
+        pass
+
+    async def _on_super_chat_delete(self, message: SuperChatDeleteMessage):
+        """
+        删除醒目留言
         """
         pass

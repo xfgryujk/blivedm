@@ -25,6 +25,9 @@ class MyBLiveClient(blivedm.BLiveClient):
     async def _on_buy_guard(self, message: blivedm.GuardBuyMessage):
         print(f'{message.username} 购买{message.gift_name}')
 
+    async def _on_super_chat(self, message: blivedm.SuperChatMessage):
+        print(f'醒目留言 ¥{message.price} {message.uname}：{message.message}')
+
 
 async def main():
     # 139是黑桐谷歌的直播间
