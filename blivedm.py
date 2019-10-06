@@ -324,13 +324,14 @@ class BLiveClient:
         'ACTIVITY_RED_PACKET', 'BLOCK', 'CHANGE_ROOM_INFO', 'CLOSE', 'COMBO_END', 'COMBO_SEND',
         'CUT_OFF', 'DAILY_QUEST_NEWDAY', 'END', 'ENTRY_EFFECT', 'GUARD_LOTTERY_START',
         'GUARD_MSG', 'GUIARD_MSG', 'HOUR_RANK_AWARDS', 'LIVE', 'LOL_ACTIVITY',
-        'LUCK_GIFT_AWARD_USER', 'MESSAGEBOX_USER_GAIN_MEDAL', 'NOTICE_MSG', 'PK_AGAIN',
-        'PK_END', 'PK_MATCH', 'PK_MIC_END', 'PK_PRE', 'PK_PROCESS', 'PK_SETTLE', 'PK_START',
-        'PREPARING', 'RAFFLE_END', 'RAFFLE_START', 'REFRESH', 'ROOM_BLOCK_INTO',
-        'ROOM_BLOCK_MSG', 'ROOM_BOX_MASTER', 'ROOM_KICKOUT', 'ROOM_LIMIT', 'ROOM_LOCK',
-        'ROOM_RANK', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'ROOM_REAL_TIME_MESSAGE_UPDATE',
-        'ROOM_REFRESH', 'ROOM_SHIELD', 'ROOM_SILENT_OFF', 'ROOM_SILENT_ON', 'ROOM_SKIN_MSG',
-        'ROUND', 'SCORE_CARD', 'SEND_TOP', 'SPECIAL_GIFT', 'SUPER_CHAT_ENTRANCE',
+        'LUCK_GIFT_AWARD_USER', 'MESSAGEBOX_USER_GAIN_MEDAL', 'new_anchor_reward', 'NOTICE_MSG',
+        'PK_AGAIN', 'PK_END', 'PK_MATCH', 'PK_MIC_END', 'PK_PRE', 'PK_PROCESS', 'PK_SETTLE',
+        'PK_START', 'PREPARING', 'RAFFLE_END', 'RAFFLE_START', 'REFRESH', 'ROOM_ADMINS',
+        'room_admin_entrance', 'ROOM_BLOCK_INTO', 'ROOM_BLOCK_MSG', 'ROOM_BOX_MASTER',
+        'ROOM_CHANGE', 'ROOM_KICKOUT', 'ROOM_LIMIT', 'ROOM_LOCK', 'ROOM_RANK',
+        'ROOM_REAL_TIME_MESSAGE_UPDATE', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'ROOM_REFRESH',
+        'ROOM_SHIELD', 'ROOM_SILENT_OFF', 'ROOM_SILENT_ON', 'ROOM_SKIN_MSG', 'ROUND',
+        'SCORE_CARD', 'SEND_TOP', 'SPECIAL_GIFT', 'SUPER_CHAT_ENTRANCE',
         'SUPER_CHAT_MESSAGE_JPN', 'SYS_GIFT', 'SYS_MSG', 'TV_END', 'TV_START', 'USER_TOAST_MSG',
         'WARNING', 'WEEK_STAR_CLOCK', 'WELCOME', 'WELCOME_GUARD', 'WIN_ACTIVITY', 'WISH_BOTTLE'
     ):
@@ -598,7 +599,7 @@ class BLiveClient:
 
             elif header.operation == Operation.SEND_MSG_REPLY:
                 body = data[offset + HEADER_STRUCT.size: offset + header.pack_len]
-                if header.ver == 2:  # WS_BODY_PROTOCOL_VERSION_DEFLATE
+                if header.ver == WS_BODY_PROTOCOL_VERSION_DEFLATE:
                     body = zlib.decompress(body)
                     await self._handle_message(body)
                 else:
