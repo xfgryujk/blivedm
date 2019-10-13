@@ -218,7 +218,7 @@ class GuardBuyMessage:
     def from_command(cls, data: dict):
         return cls(
             data['uid'], data['username'], data['guard_level'], data['num'], data['price'],
-            data['gift_id'], data['gift_name'], data['start_time'], data['end_time']
+            data['role_name'], data['gift_name'], data['start_time'], data['end_time']
         )
 
 
