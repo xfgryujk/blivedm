@@ -320,7 +320,7 @@ class BLiveClient:
         )
     }
     for cmd in (  # 其他已知命令
-        'ACTIVITY_BANNER_RED_NOTICE_CLOSE', 'ACTIVITY_BANNER_UPDATE_V2', 'ACTIVITY_MATCH_GIFT',
+        '', 'ACTIVITY_BANNER_RED_NOTICE_CLOSE', 'ACTIVITY_BANNER_UPDATE_V2', 'ACTIVITY_MATCH_GIFT',
         'ACTIVITY_RED_PACKET', 'BLOCK', 'CHANGE_ROOM_INFO', 'CLOSE', 'COMBO_END', 'COMBO_SEND',
         'CUT_OFF', 'DAILY_QUEST_NEWDAY', 'END', 'ENTRY_EFFECT', 'GUARD_LOTTERY_START',
         'GUARD_MSG', 'GUIARD_MSG', 'HOUR_RANK_AWARDS', 'LIVE', 'LOL_ACTIVITY',
@@ -336,6 +336,7 @@ class BLiveClient:
         'WARNING', 'WEEK_STAR_CLOCK', 'WELCOME', 'WELCOME_GUARD', 'WIN_ACTIVITY', 'WISH_BOTTLE'
     ):
         _COMMAND_HANDLERS[cmd] = None
+    del cmd
 
     def __init__(self, room_id, uid=0, session: aiohttp.ClientSession=None,
                  heartbeat_interval=30, ssl=True, loop=None):
@@ -603,8 +604,12 @@ class BLiveClient:
                     body = zlib.decompress(body)
                     await self._handle_message(body)
                 else:
-                    body = json.loads(body.decode('utf-8'))
-                    await self._handle_command(body)
+                    try:
+                        body = json.loads(body.decode('utf-8'))
+                        await self._handle_command(body)
+                    except BaseException:
+                        logger.error('body: %s', body)
+                        raise
 
             elif header.operation == Operation.AUTH_REPLY:
                 await self._websocket.send_bytes(self._make_packet({}, Operation.HEARTBEAT))
@@ -622,7 +627,7 @@ class BLiveClient:
                 await self._handle_command(one_command)
             return
 
-        cmd = command['cmd']
+        cmd = command.get('cmd', '')
         pos = cmd.find(':')  # 2019-5-29 B站弹幕升级新增了参数
         if pos != -1:
             cmd = cmd[:pos]
