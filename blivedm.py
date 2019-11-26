@@ -526,7 +526,6 @@ class BLiveClient:
                     f'wss://{host_server["host"]}:{host_server["wss_port"]}/sub',
                     ssl=self._ssl
                 ) as websocket:
-                    retry_count = 0
                     self._websocket = websocket
                     await self._send_auth()
                     heartbeat_future = asyncio.ensure_future(self._heartbeat_loop(), loop=self._loop)
@@ -536,6 +535,7 @@ class BLiveClient:
 
                     # 处理消息
                     async for message in websocket:  # type: aiohttp.WSMessage
+                        retry_count = 0
                         if message.type == aiohttp.WSMsgType.BINARY:
                             try:
                                 await self._handle_message(message.data)
