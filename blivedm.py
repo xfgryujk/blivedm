@@ -233,7 +233,7 @@ class SuperChatMessage:
         :param message_jpn: 消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）
         :param start_time: 开始时间戳
         :param end_time: 结束时间戳
-        :param time: 持续时间？
+        :param time: 剩余时间
         :param id_: str，消息ID，删除时用
         :param gift_id: 礼物ID
         :param gift_name: 礼物名
@@ -271,7 +271,7 @@ class SuperChatMessage:
     @classmethod
     def from_command(cls, data: dict):
         return cls(
-            data['price'], data['message'], data['message_jpn'], data['start_time'],
+            data['price'], data['message'], data['message_trans'], data['start_time'],
             data['end_time'], data['time'], data['id'], data['gift']['gift_id'],
             data['gift']['gift_name'], data['uid'], data['user_info']['uname'],
             data['user_info']['face'], data['user_info']['guard_level'],
