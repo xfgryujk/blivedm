@@ -461,7 +461,7 @@ class BLiveClient:
             return False
 
         try:
-            async with self._session.get(DANMAKU_SERVER_CONF_URL, params={'id': self._tmp_room_id},
+            async with self._session.get(DANMAKU_SERVER_CONF_URL, params={'room_id': self._tmp_room_id},
                                          ssl=self._ssl) as res:
                 if res.status != 200:
                     logger.warning('room %d getConf失败：%d %s', self._tmp_room_id,
