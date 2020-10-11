@@ -16,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 ROOM_INIT_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom'
 DANMAKU_SERVER_CONF_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo'
+DEFAULT_DANMAKU_SERVER_LIST = [
+    {'host': 'broadcastlv.chat.bilibili.com', 'port': 2243, 'wss_port': 443, 'ws_port': 2244}
+]
 
 HEADER_STRUCT = struct.Struct('>I2H2I')
 HeaderTuple = namedtuple('HeaderTuple', ('pack_len', 'raw_header_size', 'ver', 'operation', 'seq_id'))
@@ -434,6 +437,24 @@ class BLiveClient:
         return self._future
 
     async def init_room(self):
+        """
+        :return: True代表没有降级，如果需要降级后还可用，重载这个函数返回True
+        """
+        res = True
+        if not await self._init_room_id_and_owner():
+            res = False
+            # 失败了则降级
+            self._room_id = self._room_short_id = self._tmp_room_id
+            self._room_owner_uid = 0
+
+        if not await self._init_host_server():
+            res = False
+            # 失败了则降级
+            self._host_server_list = DEFAULT_DANMAKU_SERVER_LIST
+            self._host_server_token = None
+        return res
+
+    async def _init_room_id_and_owner(self):
         try:
             async with self._session.get(ROOM_INIT_URL, params={'room_id': self._tmp_room_id},
                                          ssl=self._ssl) as res:
@@ -450,7 +471,16 @@ class BLiveClient:
         except aiohttp.ClientConnectionError:
             logger.exception('room %d init_room失败：', self._tmp_room_id)
             return False
+        return True
 
+    def _parse_room_init(self, data):
+        room_info = data['room_info']
+        self._room_id = room_info['room_id']
+        self._room_short_id = room_info['short_id']
+        self._room_owner_uid = room_info['uid']
+        return True
+
+    async def _init_host_server(self):
         try:
             async with self._session.get(DANMAKU_SERVER_CONF_URL, params={'id': self._room_id, 'type': 0},
                                          ssl=self._ssl) as res:
@@ -462,21 +492,19 @@ class BLiveClient:
                 if data['code'] != 0:
                     logger.warning('room %d getConf失败：%s', self._room_id, data['msg'])
                     return False
-                self._host_server_list = data['data']['host_list']
-                self._host_server_token = data['data']['token']
-                if not self._host_server_list:
-                    logger.warning('room %d getConf失败：host_server_list为空')
+                if not self._parse_danmaku_server_conf(data['data']):
                     return False
         except aiohttp.ClientConnectionError:
             logger.exception('room %d getConf失败：', self._room_id)
             return False
         return True
 
-    def _parse_room_init(self, data):
-        room_info = data['room_info']
-        self._room_id = room_info['room_id']
-        self._room_short_id = room_info['short_id']
-        self._room_owner_uid = room_info['uid']
+    def _parse_danmaku_server_conf(self, data):
+        self._host_server_list = data['host_list']
+        self._host_server_token = data['token']
+        if not self._host_server_list:
+            logger.warning('room %d getConf失败：host_server_list为空', self._room_id)
+            return False
         return True
 
     def _make_packet(self, data, operation):
@@ -497,9 +525,10 @@ class BLiveClient:
             'protover':  2,
             'platform':  'web',
             'clientver': '1.14.3',
-            'type':      2,
-            'key':       self._host_server_token
+            'type':      2
         }
+        if self._host_server_token is not None:
+            auth_params['key'] = self._host_server_token
         await self._websocket.send_bytes(self._make_packet(auth_params, Operation.AUTH))
 
     async def _message_loop(self):
