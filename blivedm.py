@@ -464,7 +464,7 @@ class BLiveClient:
                     return False
                 data = await res.json()
                 if data['code'] != 0:
-                    logger.warning('room %d init_room失败：%s', self._tmp_room_id, data['msg'])
+                    logger.warning('room %d init_room失败：%s', self._tmp_room_id, data['message'])
                     return False
                 if not self._parse_room_init(data['data']):
                     return False
@@ -490,7 +490,7 @@ class BLiveClient:
                     return False
                 data = await res.json()
                 if data['code'] != 0:
-                    logger.warning('room %d getConf失败：%s', self._room_id, data['msg'])
+                    logger.warning('room %d getConf失败：%s', self._room_id, data['message'])
                     return False
                 if not self._parse_danmaku_server_conf(data['data']):
                     return False
