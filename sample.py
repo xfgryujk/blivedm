@@ -28,6 +28,9 @@ class MyBLiveClient(blivedm.BLiveClient):
     async def _on_super_chat(self, message: blivedm.SuperChatMessage):
         print(f'醒目留言 ¥{message.price} {message.uname}：{message.message}')
 
+    async def _on_interact_word(self, user: blivedm.User):
+        print(f'{user.uid[0]} {user.uname[0]} 进入房间')
+
 
 async def main():
     # 参数1是直播间ID

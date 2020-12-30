@@ -298,6 +298,34 @@ class SuperChatDeleteMessage:
         )
 
 
+class User:
+    def __init__(self, uid, uname, msg_type, roomid, timestamp, score, fans_medal):
+        """
+        :param uid: uid
+        :param uname: 昵称
+        :param msg_type: 消息类型
+        :param roomid: 房间号
+        :param timestamp: 时间戳
+        :param score: 分数(还不知道干嘛用的？)
+        :param fans_medal: 主播牌子信息
+        """
+        self.uid = uid,
+        self.uname = uname,
+        self.msg_type = msg_type,
+        self.roomid = roomid,
+        self.timestamp = timestamp,
+        self.score = score,
+        self.fans_medal = fans_medal
+
+    @classmethod
+    def from_command(cls, data: dict):
+        logger.warning(data)
+        return cls(
+            data['uid'], data['uname'], data['msg_type'], data['roomid'], 
+            data['timestamp'], data['score'], data['fans_medal'],
+        )
+
+
 class BLiveClient:
     _COMMAND_HANDLERS: Dict[str, Optional[Callable[['BLiveClient', dict], Awaitable]]] = {
         # 收到弹幕
@@ -320,11 +348,15 @@ class BLiveClient:
         # 删除醒目留言
         'SUPER_CHAT_MESSAGE_DELETE': lambda client, command: client._on_super_chat_delete(
             SuperChatDeleteMessage.from_command(command['data'])
-        )
+        ),
+        # 进房
+        'INTERACT_WORD': lambda client, command: client._on_interact_word(
+            User.from_command(command['data'])
+        ),
     }
     # 其他常见命令
     for cmd in (
-        'INTERACT_WORD', 'ROOM_BANNER', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'NOTICE_MSG', 'COMBO_SEND',
+        'ROOM_BANNER', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'NOTICE_MSG', 'COMBO_SEND',
         'COMBO_END', 'ENTRY_EFFECT', 'WELCOME_GUARD', 'WELCOME', 'ROOM_RANK', 'ACTIVITY_BANNER_UPDATE_V2',
         'PANEL', 'SUPER_CHAT_MESSAGE_JPN', 'USER_TOAST_MSG', 'ROOM_BLOCK_MSG', 'LIVE', 'PREPARING',
         'room_admin_entrance', 'ROOM_ADMINS', 'ROOM_CHANGE'
@@ -694,5 +726,11 @@ class BLiveClient:
     async def _on_super_chat_delete(self, message: SuperChatDeleteMessage):
         """
         删除醒目留言
+        """
+        pass
+
+    async def _on_interact_word(self, user: User):
+        """
+        进房信息
         """
         pass
