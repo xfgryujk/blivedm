@@ -546,6 +546,7 @@ class BLiveClient:
                 host_server = self._host_server_list[retry_count % len(self._host_server_list)]
                 async with self._session.ws_connect(
                     f'wss://{host_server["host"]}:{host_server["wss_port"]}/sub',
+                    receive_timeout=self._heartbeat_interval + 5,
                     ssl=self._ssl
                 ) as websocket:
                     self._websocket = websocket
