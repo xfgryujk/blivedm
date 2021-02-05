@@ -33,7 +33,7 @@ async def main():
     # 参数1是直播间ID
     # 如果SSL验证失败就把ssl设为False
     room_id = 14917277
-    client = MyBLiveClient(LIVE_ID, ssl=True)
+    client = MyBLiveClient(room_id, ssl=True)
     future = client.start()
     try:
         # 5秒后停止，测试用
