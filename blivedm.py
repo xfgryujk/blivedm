@@ -361,7 +361,7 @@ class BLiveClient:
         self._future = None
 
         if session is None:
-            self._session = aiohttp.ClientSession(loop=self._loop)
+            self._session = aiohttp.ClientSession(loop=self._loop, timeout=aiohttp.ClientTimeout(total=10))
             self._own_session = True
         else:
             self._session = session
@@ -469,7 +469,7 @@ class BLiveClient:
                     return False
                 if not self._parse_room_init(data['data']):
                     return False
-        except aiohttp.ClientConnectionError:
+        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
             logger.exception('room %d init_room失败：', self._tmp_room_id)
             return False
         return True
@@ -495,7 +495,7 @@ class BLiveClient:
                     return False
                 if not self._parse_danmaku_server_conf(data['data']):
                     return False
-        except aiohttp.ClientConnectionError:
+        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
             logger.exception('room %d getConf失败：', self._room_id)
             return False
         return True
