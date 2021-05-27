@@ -299,40 +299,7 @@ class SuperChatDeleteMessage:
 
 
 class BLiveClient:
-    _COMMAND_HANDLERS: Dict[str, Optional[Callable[['BLiveClient', dict], Awaitable]]] = {
-        # 收到弹幕
-        # go-common\app\service\live\live-dm\service\v1\send.go
-        'DANMU_MSG': lambda client, command: client._on_receive_danmaku(
-            DanmakuMessage.from_command(command['info'])
-        ),
-        # 有人送礼
-        'SEND_GIFT': lambda client, command: client._on_receive_gift(
-            GiftMessage.from_command(command['data'])
-        ),
-        # 有人上舰
-        'GUARD_BUY': lambda client, command: client._on_buy_guard(
-            GuardBuyMessage.from_command(command['data'])
-        ),
-        # 醒目留言
-        'SUPER_CHAT_MESSAGE': lambda client, command: client._on_super_chat(
-            SuperChatMessage.from_command(command['data'])
-        ),
-        # 删除醒目留言
-        'SUPER_CHAT_MESSAGE_DELETE': lambda client, command: client._on_super_chat_delete(
-            SuperChatDeleteMessage.from_command(command['data'])
-        )
-    }
-    # 其他常见命令
-    for cmd in (
-        'INTERACT_WORD', 'ROOM_BANNER', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'NOTICE_MSG', 'COMBO_SEND',
-        'COMBO_END', 'ENTRY_EFFECT', 'WELCOME_GUARD', 'WELCOME', 'ROOM_RANK', 'ACTIVITY_BANNER_UPDATE_V2',
-        'PANEL', 'SUPER_CHAT_MESSAGE_JPN', 'USER_TOAST_MSG', 'ROOM_BLOCK_MSG', 'LIVE', 'PREPARING',
-        'room_admin_entrance', 'ROOM_ADMINS', 'ROOM_CHANGE'
-    ):
-        _COMMAND_HANDLERS[cmd] = None
-    del cmd
-
-    def __init__(self, room_id, uid=0, session: aiohttp.ClientSession=None,
+    def __init__(self, room_id, uid=0, session: aiohttp.ClientSession = None,
                  heartbeat_interval=30, ssl=True, loop=None):
         """
         :param room_id: URL中的房间ID，可以为短ID
@@ -372,9 +339,41 @@ class BLiveClient:
 
         self._heartbeat_interval = heartbeat_interval
         # noinspection PyProtectedMember
-        self._ssl = ssl if ssl else ssl_._create_unverified_context()
+        self._ssl = ssl
         self._websocket = None
         self._heartbeat_timer_handle = None
+
+        self._COMMAND_HANDLERS: Dict[str, Optional[Callable[dict, Awaitable]]] = {
+            # 收到弹幕
+            # go-common\app\service\live\live-dm\service\v1\send.go
+            'DANMU_MSG': lambda command: self._on_receive_danmaku(
+                DanmakuMessage.from_command(command['info'])
+            ),
+            # 有人送礼
+            'SEND_GIFT': lambda command: self._on_receive_gift(
+                GiftMessage.from_command(command['data'])
+            ),
+            # 有人上舰
+            'GUARD_BUY': lambda command: self._on_buy_guard(
+                GuardBuyMessage.from_command(command['data'])
+            ),
+            # 醒目留言
+            'SUPER_CHAT_MESSAGE': lambda command: self._on_super_chat(
+                SuperChatMessage.from_command(command['data'])
+            ),
+            # 删除醒目留言
+            'SUPER_CHAT_MESSAGE_DELETE': lambda command: self._on_super_chat_delete(
+                SuperChatDeleteMessage.from_command(command['data'])
+            )
+        }
+        # 其他常见命令
+        for _ in [
+            'INTERACT_WORD', 'ROOM_BANNER', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'NOTICE_MSG', 'COMBO_SEND',
+            'COMBO_END', 'ENTRY_EFFECT', 'WELCOME_GUARD', 'WELCOME', 'ROOM_RANK', 'ACTIVITY_BANNER_UPDATE_V2',
+            'PANEL', 'SUPER_CHAT_MESSAGE_JPN', 'USER_TOAST_MSG', 'ROOM_BLOCK_MSG', 'LIVE', 'PREPARING',
+            'room_admin_entrance', 'ROOM_ADMINS', 'ROOM_CHANGE'
+        ]:
+            self._COMMAND_HANDLERS[_] = None
 
     @property
     def is_running(self):
@@ -522,12 +521,12 @@ class BLiveClient:
 
     async def _send_auth(self):
         auth_params = {
-            'uid':       self._uid,
-            'roomid':    self._room_id,
-            'protover':  2,
-            'platform':  'web',
+            'uid': self._uid,
+            'roomid': self._room_id,
+            'protover': 2,
+            'platform': 'web',
             'clientver': '1.14.3',
-            'type':      2
+            'type': 2
         }
         if self._host_server_token is not None:
             auth_params['key'] = self._host_server_token
@@ -545,9 +544,9 @@ class BLiveClient:
                 # 连接
                 host_server = self._host_server_list[retry_count % len(self._host_server_list)]
                 async with self._session.ws_connect(
-                    f'wss://{host_server["host"]}:{host_server["wss_port"]}/sub',
-                    receive_timeout=self._heartbeat_interval + 5,
-                    ssl=self._ssl
+                        f'wss://{host_server["host"]}:{host_server["wss_port"]}/sub',
+                        receive_timeout=self._heartbeat_interval + 5,
+                        ssl=self._ssl
                 ) as websocket:
                     self._websocket = websocket
                     await self._send_auth()
@@ -647,7 +646,7 @@ class BLiveClient:
         if cmd in self._COMMAND_HANDLERS:
             handler = self._COMMAND_HANDLERS[cmd]
             if handler is not None:
-                await handler(self, command)
+                await handler(command)
         else:
             logger.warning('room %d 未知命令：cmd=%s %s', self.room_id, cmd, command)
             # 只有第一次遇到未知命令时log

@@ -7,11 +7,12 @@ import blivedm
 
 class MyBLiveClient(blivedm.BLiveClient):
     # 演示如何自定义handler
-    _COMMAND_HANDLERS = blivedm.BLiveClient._COMMAND_HANDLERS.copy()
+    def __init__(self, room_id):
+        super().__init__(room_id)
+        self._COMMAND_HANDLERS['WELCOME'] = self.__on_vip_enter  # 老爷入场
 
     async def __on_vip_enter(self, command):
         print(command)
-    _COMMAND_HANDLERS['WELCOME'] = __on_vip_enter  # 老爷入场
 
     async def _on_receive_popularity(self, popularity: int):
         print(f'当前人气值：{popularity}')
@@ -33,7 +34,7 @@ async def main():
     # 参数1是直播间ID
     # 如果SSL验证失败就把ssl设为False
     room_id = 14917277
-    client = MyBLiveClient(room_id, ssl=True)
+    client = MyBLiveClient(room_id)
     future = client.start()
     try:
         # 5秒后停止，测试用
