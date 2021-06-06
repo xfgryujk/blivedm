@@ -298,6 +298,46 @@ class SuperChatDeleteMessage:
         )
 
 
+class HotRankChangedMessage:
+    def __init__(self, rank, trend, countdown, timestamp,
+                 web_url, live_url, blink_url, live_link_url, pc_link_url,
+                 icon, area_name):
+        """
+        :param rank: 排名
+        :param trend: 趋势？
+        :param countdown: 倒计时？
+        :param timestamp: 时间戳
+
+        :param web_url: 分区排名详情页
+        :param live_url: 分区排名详情页
+        :param blink_url: 分区排名详情页
+        :param live_link_url: 分区排名详情页
+        :param pc_link_url: 分区排名详情页
+
+        :param icon: 分区图标
+        :param area_name: 分区名称
+        """
+        self.rank = rank
+        self.trend = trend
+        self.countdown = countdown
+        self.timestamp = timestamp
+        self.web_url = web_url
+        self.live_url = live_url
+        self.blink_url = blink_url
+        self.live_link_url = live_link_url
+        self.pc_link_url = pc_link_url
+        self.icon = icon
+        self.area_name = area_name
+
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            data['rank'], data['trend'], data['countdown'], data['timestamp'],
+            data['web_url'], data['live_url'], data['blink_url'], data['live_link_url'], data['pc_link_url'],
+            data['icon'], data['area_name']
+        )
+
 class BLiveClient:
     _COMMAND_HANDLERS: Dict[str, Optional[Callable[['BLiveClient', dict], Awaitable]]] = {
         # 收到弹幕
@@ -320,6 +360,10 @@ class BLiveClient:
         # 删除醒目留言
         'SUPER_CHAT_MESSAGE_DELETE': lambda client, command: client._on_super_chat_delete(
             SuperChatDeleteMessage.from_command(command['data'])
+        ),
+        # 直播间分区排名更新
+        'HOT_RANK_CHANGED': lambda client, command: client._on_hot_rank_changed(
+            HotRankChangedMessage.from_command(command['data'])
         )
     }
     # 其他常见命令
@@ -327,7 +371,8 @@ class BLiveClient:
         'INTERACT_WORD', 'ROOM_BANNER', 'ROOM_REAL_TIME_MESSAGE_UPDATE', 'NOTICE_MSG', 'COMBO_SEND',
         'COMBO_END', 'ENTRY_EFFECT', 'WELCOME_GUARD', 'WELCOME', 'ROOM_RANK', 'ACTIVITY_BANNER_UPDATE_V2',
         'PANEL', 'SUPER_CHAT_MESSAGE_JPN', 'USER_TOAST_MSG', 'ROOM_BLOCK_MSG', 'LIVE', 'PREPARING',
-        'room_admin_entrance', 'ROOM_ADMINS', 'ROOM_CHANGE'
+        'room_admin_entrance', 'ROOM_ADMINS', 'ROOM_CHANGE', 'STOP_LIVE_ROOM_LIST', 'ONLINE_RANK_V2',
+        'WIDGET_BANNER', 'ONLINE_RANK_COUNT', 'ONLINE_RANK_TOP3'
     ):
         _COMMAND_HANDLERS[cmd] = None
     del cmd
@@ -686,5 +731,11 @@ class BLiveClient:
     async def _on_super_chat_delete(self, message: SuperChatDeleteMessage):
         """
         删除醒目留言
+        """
+        pass
+
+    async def _on_hot_rank_changed(self, message: HotRankChangedMessage):
+        """
+        直播间分区排名更新
         """
         pass

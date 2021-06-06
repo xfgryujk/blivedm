@@ -28,6 +28,9 @@ class MyBLiveClient(blivedm.BLiveClient):
     async def _on_super_chat(self, message: blivedm.SuperChatMessage):
         print(f'醒目留言 ¥{message.price} {message.uname}：{message.message}')
 
+    async def _on_hot_rank_changed(self, message: blivedm.HotRankChangedMessage):
+        print(f'当前分区排名：{message.area_name}区第{message.rank}名')
+
 
 async def main():
     # 参数1是直播间ID
