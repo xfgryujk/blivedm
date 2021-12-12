@@ -1,8 +1,22 @@
 # -*- coding: utf-8 -*-
-
 import asyncio
 
 import blivedm
+
+
+async def main():
+    # 直播间ID的取值看直播间URL
+    # 如果SSL验证失败就把ssl设为False，B站真的有过忘续证书的情况
+    client = MyBLiveClient(room_id=21224291, ssl=True)
+    future = client.start()
+    try:
+        # 5秒后停止，测试用
+        # await asyncio.sleep(5)
+        # future = client.stop()
+
+        await future
+    finally:
+        await client.close()
 
 
 class MyBLiveClient(blivedm.BLiveClient):
@@ -27,21 +41,6 @@ class MyBLiveClient(blivedm.BLiveClient):
 
     async def _on_super_chat(self, message: blivedm.SuperChatMessage):
         print(f'醒目留言 ¥{message.price} {message.uname}：{message.message}')
-
-
-async def main():
-    # 直播间ID的取值看直播间URL
-    # 如果SSL验证失败就把ssl设为False，B站真的有过忘续证书的情况
-    client = MyBLiveClient(room_id=21449083, ssl=True)
-    future = client.start()
-    try:
-        # 5秒后停止，测试用
-        # await asyncio.sleep(5)
-        # future = client.stop()
-
-        await future
-    finally:
-        await client.close()
 
 
 if __name__ == '__main__':
