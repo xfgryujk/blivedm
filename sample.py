@@ -7,7 +7,10 @@ import blivedm
 async def main():
     # 直播间ID的取值看直播间URL
     # 如果SSL验证失败就把ssl设为False，B站真的有过忘续证书的情况
-    client = MyBLiveClient(room_id=21224291, ssl=True)
+    client = blivedm.BLiveClient(room_id=411318, ssl=True)
+    handler = MyHandler()
+    client.add_handler(handler)
+
     future = client.start()
     try:
         # 5秒后停止，测试用
@@ -19,27 +22,28 @@ async def main():
         await client.close()
 
 
-class MyBLiveClient(blivedm.BLiveClient):
-    # 演示如何自定义handler
-    _COMMAND_HANDLERS = blivedm.BLiveClient._COMMAND_HANDLERS.copy()
+class MyHandler(blivedm.BaseHandler):
+    # 演示如何添加自定义回调
+    _CMD_CALLBACK_DICT = blivedm.BaseHandler._CMD_CALLBACK_DICT.copy()
 
-    async def __on_vip_enter(self, command):
-        print(command)
-    _COMMAND_HANDLERS['WELCOME'] = __on_vip_enter  # 老爷入场
+    # 入场消息回调
+    async def __interact_word_callback(self, client: blivedm.BLiveClient, command: dict):
+        print(f"self_type={type(self).__name__}, room_id={client.room_id}, uname={command['data']['uname']}")
+    _CMD_CALLBACK_DICT['INTERACT_WORD'] = __interact_word_callback  # noqa
 
-    async def _on_receive_popularity(self, popularity: int):
-        print(f'当前人气值：{popularity}')
+    async def _on_popularity(self, client: blivedm.BLiveClient, message: blivedm.HeartbeatMessage):
+        print(f'当前人气值：{message.popularity}')
 
-    async def _on_receive_danmaku(self, danmaku: blivedm.DanmakuMessage):
-        print(f'{danmaku.uname}：{danmaku.msg}')
+    async def _on_danmaku(self, client: blivedm.BLiveClient, message: blivedm.DanmakuMessage):
+        print(f'{message.uname}：{message.msg}')
 
-    async def _on_receive_gift(self, gift: blivedm.GiftMessage):
-        print(f'{gift.uname} 赠送{gift.gift_name}x{gift.num} （{gift.coin_type}币x{gift.total_coin}）')
+    async def _on_gift(self, client: blivedm.BLiveClient, message: blivedm.GiftMessage):
+        print(f'{message.uname} 赠送{message.gift_name}x{message.num} （{message.coin_type}币x{message.total_coin}）')
 
-    async def _on_buy_guard(self, message: blivedm.GuardBuyMessage):
+    async def _on_buy_guard(self, client: blivedm.BLiveClient, message: blivedm.GuardBuyMessage):
         print(f'{message.username} 购买{message.gift_name}')
 
-    async def _on_super_chat(self, message: blivedm.SuperChatMessage):
+    async def _on_super_chat(self, client: blivedm.BLiveClient, message: blivedm.SuperChatMessage):
         print(f'醒目留言 ¥{message.price} {message.uname}：{message.message}')
 
 

@@ -2,12 +2,33 @@
 from typing import *
 
 __all__ = (
+    'HeartbeatMessage',
     'DanmakuMessage',
     'GiftMessage',
     'GuardBuyMessage',
     'SuperChatMessage',
     'SuperChatDeleteMessage',
 )
+
+
+class HeartbeatMessage:
+    """
+    心跳消息
+
+    :param popularity: 人气值
+    """
+
+    def __init__(
+        self,
+        popularity: int = None,
+    ):
+        self.popularity: int = popularity
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            popularity=data['popularity'],
+        )
 
 
 class DanmakuMessage:
@@ -18,7 +39,7 @@ class DanmakuMessage:
     :param font_size: 字体尺寸
     :param color: 颜色
     :param timestamp: 时间戳（毫秒）
-    :param rnd: 随机数
+    :param rnd: 随机数，可能是去重用的
     :param uid_crc32: 用户ID文本的CRC32
     :param msg_type: 是否礼物弹幕（节奏风暴）
     :param bubble: 右侧评论栏气泡
@@ -196,7 +217,7 @@ class GiftMessage:
     :param gift_type: 礼物类型（未知）
     :param action: 目前遇到的有'喂食'、'赠送'
     :param price: 礼物单价瓜子数
-    :param rnd: 随机数，估计是去重用的
+    :param rnd: 随机数，可能是去重用的
     :param coin_type: 瓜子类型，'silver'或'gold'
     :param total_coin: 总瓜子数
     """
