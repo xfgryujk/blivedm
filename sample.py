@@ -30,17 +30,14 @@ class MyBLiveClient(blivedm.BLiveClient):
 
 
 async def main():
-    # 参数1是直播间ID
-    # 如果SSL验证失败就把ssl设为False
-    room_id = 14917277
-    client = MyBLiveClient(room_id, ssl=True)
+    # 直播间ID的取值看直播间URL
+    # 如果SSL验证失败就把ssl设为False，B站真的有过忘续证书的情况
+    client = MyBLiveClient(room_id=21449083, ssl=True)
     future = client.start()
     try:
         # 5秒后停止，测试用
         # await asyncio.sleep(5)
         # future = client.stop()
-        # 或者
-        # future.cancel()
 
         await future
     finally:

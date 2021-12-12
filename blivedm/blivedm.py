@@ -12,7 +12,7 @@ from typing import *
 
 import aiohttp
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('blivedm')
 
 ROOM_INIT_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom'
 DANMAKU_SERVER_CONF_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo'
