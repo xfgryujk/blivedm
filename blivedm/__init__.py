@@ -1,4 +1,4 @@
 # -*- coding: utf-8 -*-
 from .models import *
 from .handlers import *
-from .blivedm import *
+from .client import *

@@ -2,7 +2,7 @@
 import logging
 from typing import *
 
-from . import blivedm
+from . import client as client_
 from . import models
 
 __all__ = (
@@ -45,7 +45,7 @@ class HandlerInterface:
     直播消息处理器接口
     """
 
-    async def handle(self, client: blivedm.BLiveClient, command: dict):
+    async def handle(self, client: client_.BLiveClient, command: dict):
         raise NotImplementedError
 
 
@@ -54,29 +54,29 @@ class BaseHandler(HandlerInterface):
     一个简单的消息处理器实现，带消息分发和消息类型转换。继承并重写_on_xxx方法即可实现自己的处理器
     """
 
-    def __heartbeat_callback(self, client: blivedm.BLiveClient, command: dict):
+    def __heartbeat_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_popularity(client, models.HeartbeatMessage.from_command(command['data']))
 
-    def __danmu_msg_callback(self, client: blivedm.BLiveClient, command: dict):
+    def __danmu_msg_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_danmaku(client, models.DanmakuMessage.from_command(command['info']))
 
-    def __send_gift_callback(self, client: blivedm.BLiveClient, command: dict):
+    def __send_gift_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_gift(client, models.GiftMessage.from_command(command['data']))
 
-    def __guard_buy_callback(self, client: blivedm.BLiveClient, command: dict):
+    def __guard_buy_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_buy_guard(client, models.GuardBuyMessage.from_command(command['data']))
 
-    def __super_chat_message_callback(self, client: blivedm.BLiveClient, command: dict):
+    def __super_chat_message_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_super_chat(client, models.SuperChatMessage.from_command(command['data']))
 
-    def __super_chat_message_delete_callback(self, client: blivedm.BLiveClient, command: dict):
+    def __super_chat_message_delete_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_super_chat_delete(client, models.SuperChatDeleteMessage.from_command(command['data']))
 
     # cmd -> 处理回调
     _CMD_CALLBACK_DICT: Dict[
         str,
         Optional[Callable[
-            ['BaseHandler', blivedm.BLiveClient, dict],
+            ['BaseHandler', client_.BLiveClient, dict],
             Awaitable
         ]]
     ] = {
@@ -99,7 +99,7 @@ class BaseHandler(HandlerInterface):
         _CMD_CALLBACK_DICT[cmd] = None
     del cmd
 
-    async def handle(self, client: blivedm.BLiveClient, command: dict):
+    async def handle(self, client: client_.BLiveClient, command: dict):
         cmd = command.get('cmd', '')
         pos = cmd.find(':')  # 2019-5-29 B站弹幕升级新增了参数
         if pos != -1:
@@ -116,32 +116,32 @@ class BaseHandler(HandlerInterface):
         if callback is not None:
             await callback(self, client, command)
 
-    async def _on_popularity(self, client: blivedm.BLiveClient, message: models.HeartbeatMessage):
+    async def _on_popularity(self, client: client_.BLiveClient, message: models.HeartbeatMessage):
         """
         收到人气值
         """
 
-    async def _on_danmaku(self, client: blivedm.BLiveClient, message: models.DanmakuMessage):
+    async def _on_danmaku(self, client: client_.BLiveClient, message: models.DanmakuMessage):
         """
         收到弹幕
         """
 
-    async def _on_gift(self, client: blivedm.BLiveClient, message: models.GiftMessage):
+    async def _on_gift(self, client: client_.BLiveClient, message: models.GiftMessage):
         """
         收到礼物
         """
 
-    async def _on_buy_guard(self, client: blivedm.BLiveClient, message: models.GuardBuyMessage):
+    async def _on_buy_guard(self, client: client_.BLiveClient, message: models.GuardBuyMessage):
         """
         有人上舰
         """
 
-    async def _on_super_chat(self, client: blivedm.BLiveClient, message: models.SuperChatMessage):
+    async def _on_super_chat(self, client: client_.BLiveClient, message: models.SuperChatMessage):
         """
         醒目留言
         """
 
-    async def _on_super_chat_delete(self, client: blivedm.BLiveClient, message: models.SuperChatDeleteMessage):
+    async def _on_super_chat_delete(self, client: client_.BLiveClient, message: models.SuperChatDeleteMessage):
         """
         删除醒目留言
         """
