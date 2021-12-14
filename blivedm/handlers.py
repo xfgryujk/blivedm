@@ -13,7 +13,7 @@ __all__ = (
 logger = logging.getLogger('blivedm')
 
 # 常见可忽略的cmd
-FREQUENT_CMDS = (
+IGNORED_CMDS = (
     'INTERACT_WORD',
     'ROOM_BANNER',
     'ROOM_REAL_TIME_MESSAGE_UPDATE',
@@ -55,7 +55,7 @@ class BaseHandler(HandlerInterface):
     """
 
     def __heartbeat_callback(self, client: client_.BLiveClient, command: dict):
-        return self._on_popularity(client, models.HeartbeatMessage.from_command(command['data']))
+        return self._on_heartbeat(client, models.HeartbeatMessage.from_command(command['data']))
 
     def __danmu_msg_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_danmaku(client, models.DanmakuMessage.from_command(command['info']))
@@ -95,7 +95,7 @@ class BaseHandler(HandlerInterface):
         'SUPER_CHAT_MESSAGE_DELETE': __super_chat_message_delete_callback,
     }
     # 忽略其他常见cmd
-    for cmd in FREQUENT_CMDS:
+    for cmd in IGNORED_CMDS:
         _CMD_CALLBACK_DICT[cmd] = None
     del cmd
 
@@ -116,9 +116,9 @@ class BaseHandler(HandlerInterface):
         if callback is not None:
             await callback(self, client, command)
 
-    async def _on_popularity(self, client: client_.BLiveClient, message: models.HeartbeatMessage):
+    async def _on_heartbeat(self, client: client_.BLiveClient, message: models.HeartbeatMessage):
         """
-        收到人气值
+        收到心跳包（人气值）
         """
 
     async def _on_danmaku(self, client: client_.BLiveClient, message: models.DanmakuMessage):
