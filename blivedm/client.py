@@ -234,6 +234,8 @@ class BLiveClient:
 
     async def init_room(self):
         """
+        初始化连接房间需要的字段
+
         :return: True代表没有降级，如果需要降级后还可用，重载这个函数返回True
         """
         res = True
@@ -304,18 +306,28 @@ class BLiveClient:
         return True
 
     @staticmethod
-    def _make_packet(data, operation):
+    def _make_packet(data: dict, operation: int) -> bytes:
+        """
+        创建一个要发送给服务器的包
+
+        :param data: 包体JSON数据
+        :param operation: 操作码，见Operation
+        :return: 整个包的数据
+        """
         body = json.dumps(data).encode('utf-8')
         header = HEADER_STRUCT.pack(
-            HEADER_STRUCT.size + len(body),
-            HEADER_STRUCT.size,
-            1,
-            operation,
-            1
+            HEADER_STRUCT.size + len(body),  # pack_len
+            HEADER_STRUCT.size,  # raw_header_size
+            1,  # ver
+            operation,  # operation
+            1  # seq_id
         )
         return header + body
 
     async def _send_auth(self):
+        """
+        发送认证包
+        """
         auth_params = {
             'uid': self._uid,
             'roomid': self._room_id,
@@ -329,10 +341,16 @@ class BLiveClient:
         await self._websocket.send_bytes(self._make_packet(auth_params, Operation.AUTH))
 
     async def _network_coroutine(self):
+        """
+        网络协程，负责连接服务器、接收消息、解包
+        """
         # 如果之前未初始化则初始化
         if self._host_server_token is None:
-            if not await self.init_room():
-                raise InitError('初始化失败')
+            try:
+                if not await self.init_room():
+                    raise InitError('初始化失败')
+            except asyncio.CancelledError:
+                return
 
         retry_count = 0
         while True:
@@ -340,47 +358,34 @@ class BLiveClient:
                 # 连接
                 host_server = self._host_server_list[retry_count % len(self._host_server_list)]
                 async with self._session.ws_connect(
-                    f'wss://{host_server["host"]}:{host_server["wss_port"]}/sub',
+                    f"wss://{host_server['host']}:{host_server['wss_port']}/sub",
                     receive_timeout=self._heartbeat_interval + 5,
                     ssl=self._ssl
                 ) as websocket:
                     self._websocket = websocket
-                    await self._send_auth()
-                    self._heartbeat_timer_handle = self._loop.call_later(
-                        self._heartbeat_interval, self._on_send_heartbeat
-                    )
+                    await self._on_ws_connect()
 
                     # 处理消息
                     message: aiohttp.WSMessage
                     async for message in websocket:
                         retry_count = 0
-                        if message.type != aiohttp.WSMsgType.BINARY:
-                            logger.warning('room %d 未知的websocket消息：type=%s %s', self.room_id,
-                                           message.type, message.data)
-                            continue
+                        await self._on_ws_message(message)
 
-                        try:
-                            await self._handle_ws_message(message.data)
-                        except asyncio.CancelledError:
-                            raise
-                        except Exception:  # noqa
-                            logger.exception('room %d 处理websocket消息时发生错误：', self.room_id)
-
-            except asyncio.CancelledError:
-                break
             except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
                 # 重连
                 pass
+            except asyncio.CancelledError:
+                # 正常停止
+                break
             except ssl_.SSLError:
                 logger.exception('SSL错误：')
                 # 证书错误时无法重连
                 break
             finally:
                 self._websocket = None
-                if self._heartbeat_timer_handle is not None:
-                    self._heartbeat_timer_handle.cancel()
-                    self._heartbeat_timer_handle = None
+                await self._on_ws_close()
 
+            # 准备重连
             retry_count += 1
             logger.warning('room %d 掉线重连中%d', self.room_id, retry_count)
             try:
@@ -388,12 +393,53 @@ class BLiveClient:
             except asyncio.CancelledError:
                 break
 
+    async def _on_ws_connect(self):
+        """
+        websocket连接成功
+        """
+        await self._send_auth()
+        self._heartbeat_timer_handle = self._loop.call_later(self._heartbeat_interval, self._on_send_heartbeat)
+
     def _on_send_heartbeat(self):
+        """
+        定时发送心跳包的回调
+        """
         coro = self._websocket.send_bytes(self._make_packet({}, Operation.HEARTBEAT))
         asyncio.ensure_future(coro, loop=self._loop)
         self._heartbeat_timer_handle = self._loop.call_later(self._heartbeat_interval, self._on_send_heartbeat)
 
-    async def _handle_ws_message(self, data):
+    async def _on_ws_message(self, message: aiohttp.WSMessage):
+        """
+        收到websocket消息
+
+        :param message: websocket消息
+        """
+        if message.type != aiohttp.WSMsgType.BINARY:
+            logger.warning('room %d 未知的websocket消息：type=%s %s', self.room_id,
+                           message.type, message.data)
+            return
+
+        try:
+            await self._parse_ws_message(message.data)
+        except asyncio.CancelledError:
+            raise
+        except Exception:  # noqa
+            logger.exception('room %d 处理websocket消息时发生错误：', self.room_id)
+
+    async def _on_ws_close(self):
+        """
+        websocket连接断开
+        """
+        if self._heartbeat_timer_handle is not None:
+            self._heartbeat_timer_handle.cancel()
+            self._heartbeat_timer_handle = None
+
+    async def _parse_ws_message(self, data: bytes):
+        """
+        解析websocket消息
+
+        :param data: websocket消息数据
+        """
         offset = 0
         while offset < len(data):
             try:
@@ -402,6 +448,7 @@ class BLiveClient:
                 break
 
             if header.operation == Operation.HEARTBEAT_REPLY:
+                # 心跳包，自己造个消息当成业务消息处理
                 popularity = int.from_bytes(
                     data[offset + HEADER_STRUCT.size: offset + HEADER_STRUCT.size + 4],
                     'big'
@@ -412,35 +459,46 @@ class BLiveClient:
                         'popularity': popularity
                     }
                 }
-                await self._handle_command(body)
+                await self._parse_command(body)
 
             elif header.operation == Operation.SEND_MSG_REPLY:
+                # 业务消息
                 body = data[offset + HEADER_STRUCT.size: offset + header.pack_len]
                 if header.ver == WS_BODY_PROTOCOL_VERSION_DEFLATE:
+                    # 压缩过的先解压，为了避免阻塞网络线程，放在其他线程执行
                     body = await self._loop.run_in_executor(None, zlib.decompress, body)
-                    await self._handle_ws_message(body)
+                    await self._parse_ws_message(body)
                 else:
+                    # 没压缩过的
                     try:
                         body = json.loads(body.decode('utf-8'))
-                        await self._handle_command(body)
+                        await self._parse_command(body)
                     except Exception:
                         logger.error('body=%s', body)
                         raise
 
             elif header.operation == Operation.AUTH_REPLY:
+                # 认证响应
                 await self._websocket.send_bytes(self._make_packet({}, Operation.HEARTBEAT))
 
             else:
+                # 未知消息
                 body = data[offset + HEADER_STRUCT.size: offset + header.pack_len]
                 logger.warning('room %d 未知包类型：operation=%d %s%s', self.room_id,
                                header.operation, header, body)
 
             offset += header.pack_len
 
-    async def _handle_command(self, command):
+    async def _parse_command(self, command: Union[list, dict]):
+        """
+        解析业务消息
+
+        :param command: 业务消息
+        """
+        # 这里可能会多个消息一起发
         if isinstance(command, list):
             for one_command in command:
-                await self._handle_command(one_command)
+                await self._parse_command(one_command)
             return
 
         for handler in self._handlers:
