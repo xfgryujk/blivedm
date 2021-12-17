@@ -410,9 +410,26 @@ class BLiveClient:
         """
         定时发送心跳包的回调
         """
-        coro = self._websocket.send_bytes(self._make_packet({}, Operation.HEARTBEAT))
-        asyncio.ensure_future(coro, loop=self._loop)
+        if self._websocket is None or self._websocket.closed:
+            self._heartbeat_timer_handle = None
+            return
+
         self._heartbeat_timer_handle = self._loop.call_later(self._heartbeat_interval, self._on_send_heartbeat)
+        asyncio.ensure_future(self._send_heartbeat(), loop=self._loop)
+
+    async def _send_heartbeat(self):
+        """
+        发送心跳包
+        """
+        if self._websocket is None or self._websocket.closed:
+            return
+
+        try:
+            await self._websocket.send_bytes(self._make_packet({}, Operation.HEARTBEAT))
+        except ConnectionResetError as e:
+            logger.warning('room=%d _send_heartbeat() failed: %r', self.room_id, e)
+        except Exception:  # noqa
+            logger.exception('room=%d _send_heartbeat() failed:', self.room_id)
 
     async def _on_ws_message(self, message: aiohttp.WSMessage):
         """
