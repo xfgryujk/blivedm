@@ -216,10 +216,11 @@ class BLiveClient:
 
     async def stop_and_close(self):
         """
-        停止本客户端并释放本客户端的资源，调用后本客户端将不可用
+        便利函数，停止本客户端并释放本客户端的资源，调用后本客户端将不可用
         """
-        self.stop()
-        await self.join()
+        if self.is_running:
+            self.stop()
+            await self.join()
         await self.close()
 
     async def join(self):
@@ -230,7 +231,7 @@ class BLiveClient:
             logger.warning('room=%s client is stopped, cannot join()', self.room_id)
             return
 
-        await self._network_future
+        await asyncio.shield(self._network_future)
 
     async def close(self):
         """
@@ -492,7 +493,7 @@ class BLiveClient:
             # 业务消息，可能有多个包一起发，需要分包
             while True:
                 body = data[offset + header.raw_header_size: offset + header.pack_len]
-                await self.__parse_business_message(header, body)
+                await self._parse_business_message(header, body)
 
                 offset += header.pack_len
                 if offset >= len(data):
@@ -524,7 +525,7 @@ class BLiveClient:
             logger.warning('room=%d unknown message operation=%d, header=%s, body=%s', self.room_id,
                            header.operation, header, body)
 
-    async def __parse_business_message(self, header: HeaderTuple, body: bytes):
+    async def _parse_business_message(self, header: HeaderTuple, body: bytes):
         """
         解析业务消息
         """
