@@ -6,10 +6,10 @@ import json
 import logging
 import ssl as ssl_
 import struct
-import zlib
 from typing import *
 
 import aiohttp
+import brotli
 
 from . import handlers
 
@@ -423,9 +423,8 @@ class BLiveClient:
         auth_params = {
             'uid': self._uid,
             'roomid': self._room_id,
-            'protover': 2,
+            'protover': 3,
             'platform': 'web',
-            'clientver': '1.14.3',
             'type': 2
         }
         if self._host_server_token is not None:
@@ -531,9 +530,9 @@ class BLiveClient:
         """
         if header.operation == Operation.SEND_MSG_REPLY:
             # 业务消息
-            if header.ver == ProtoVer.DEFLATE:
+            if header.ver == ProtoVer.BROTLI:
                 # 压缩过的先解压，为了避免阻塞网络线程，放在其他线程执行
-                body = await self._loop.run_in_executor(None, zlib.decompress, body)
+                body = await self._loop.run_in_executor(None, brotli.decompress, body)
                 await self._parse_ws_message(body)
             elif header.ver == ProtoVer.NORMAL:
                 # 没压缩过的直接反序列化，因为有万恶的GIL，这里不能并行避免阻塞

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import json
 from typing import *
 
 __all__ = (
@@ -39,10 +40,14 @@ class DanmakuMessage:
     :param font_size: 字体尺寸
     :param color: 颜色
     :param timestamp: 时间戳（毫秒）
-    :param rnd: 随机数，可能是去重用的
+    :param rnd: 随机数，前端叫作弹幕ID，可能是去重用的
     :param uid_crc32: 用户ID文本的CRC32
     :param msg_type: 是否礼物弹幕（节奏风暴）
     :param bubble: 右侧评论栏气泡
+    :param dm_type: 弹幕类型，0文本，1表情，2语音
+    :param emoticon_options: 表情参数
+    :param voice_config: 语音参数
+    :param mode_info: 一些附加参数
 
     :param msg: 弹幕内容
 
@@ -82,6 +87,10 @@ class DanmakuMessage:
         uid_crc32: str = None,
         msg_type: int = None,
         bubble: int = None,
+        dm_type: int = None,
+        emoticon_options: Union[dict, str] = None,
+        voice_config: Union[dict, str] = None,
+        mode_info: dict = None,
 
         msg: str = None,
 
@@ -118,6 +127,10 @@ class DanmakuMessage:
         self.uid_crc32: str = uid_crc32
         self.msg_type: int = msg_type
         self.bubble: int = bubble
+        self.dm_type: int = dm_type
+        self.emoticon_options: Union[dict, str] = emoticon_options
+        self.voice_config: Union[dict, str] = voice_config
+        self.mode_info: dict = mode_info
 
         self.msg: str = msg
 
@@ -172,6 +185,10 @@ class DanmakuMessage:
             uid_crc32=info[0][7],
             msg_type=info[0][9],
             bubble=info[0][10],
+            dm_type=info[0][12],
+            emoticon_options=info[0][13],
+            voice_config=info[0][14],
+            mode_info=info[0][15],
 
             msg=info[1],
 
@@ -201,6 +218,37 @@ class DanmakuMessage:
             privilege_type=info[7],
         )
 
+    @property
+    def emoticon_options_dict(self) -> dict:
+        """
+        示例：
+        {'bulge_display': 0, 'emoticon_unique': 'official_13', 'height': 60, 'in_player_area': 1, 'is_dynamic': 1,
+         'url': 'https://i0.hdslb.com/bfs/live/a98e35996545509188fe4d24bd1a56518ea5af48.png', 'width': 183}
+        """
+        if isinstance(self.emoticon_options, dict):
+            return self.emoticon_options
+        try:
+            return json.loads(self.emoticon_options)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    @property
+    def voice_config_dict(self) -> dict:
+        """
+        示例：
+        {'voice_url': 'https%3A%2F%2Fboss.hdslb.com%2Flive-dm-voice%2Fb5b26e48b556915cbf3312a59d3bb2561627725945.wav
+         %3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3D2663ba902868f12f%252F20210731%252Fshjd%252Fs3%25
+         2Faws4_request%26X-Amz-Date%3D20210731T100545Z%26X-Amz-Expires%3D600000%26X-Amz-SignedHeaders%3Dhost%26
+         X-Amz-Signature%3D114e7cb5ac91c72e231c26d8ca211e53914722f36309b861a6409ffb20f07ab8',
+         'file_format': 'wav', 'text': '汤，下午好。', 'file_duration': 1}
+        """
+        if isinstance(self.voice_config, dict):
+            return self.voice_config
+        try:
+            return json.loads(self.voice_config)
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
 
 class GiftMessage:
     """
@@ -217,9 +265,10 @@ class GiftMessage:
     :param gift_type: 礼物类型（未知）
     :param action: 目前遇到的有'喂食'、'赠送'
     :param price: 礼物单价瓜子数
-    :param rnd: 随机数，可能是去重用的
-    :param coin_type: 瓜子类型，'silver'或'gold'
+    :param rnd: 随机数，可能是去重用的。有时是时间戳+去重ID，有时是UUID
+    :param coin_type: 瓜子类型，'silver'或'gold'，1000金瓜子 = 1元
     :param total_coin: 总瓜子数
+    :param tid: 可能是事务ID，有时和rnd相同
     """
 
     def __init__(
@@ -238,6 +287,7 @@ class GiftMessage:
         rnd: str = None,
         coin_type: str = None,
         total_coin: int = None,
+        tid: str = None,
     ):
         self.gift_name = gift_name
         self.num = num
@@ -253,6 +303,7 @@ class GiftMessage:
         self.rnd = rnd
         self.coin_type = coin_type
         self.total_coin = total_coin
+        self.tid = tid
 
     @classmethod
     def from_command(cls, data: dict):
@@ -271,6 +322,7 @@ class GiftMessage:
             rnd=data['rnd'],
             coin_type=data['coin_type'],
             total_coin=data['total_coin'],
+            tid=data['tid'],
         )
 
 
@@ -285,8 +337,8 @@ class GuardBuyMessage:
     :param price: 单价金瓜子数
     :param gift_id: 礼物ID
     :param gift_name: 礼物名
-    :param start_time: 开始时间戳，和结束时间戳一样
-    :param end_time: 结束时间戳，和开始时间戳一样
+    :param start_time: 开始时间戳，和结束时间戳相同
+    :param end_time: 结束时间戳，和开始时间戳相同
     """
 
     def __init__(
@@ -332,10 +384,10 @@ class SuperChatMessage:
 
     :param price: 价格（人民币）
     :param message: 消息
-    :param message_jpn: 消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）
+    :param message_trans: 消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）
     :param start_time: 开始时间戳
     :param end_time: 结束时间戳
-    :param time: 持续时间（结束时间戳 - 开始时间戳）
+    :param time: 剩余时间（约等于 结束时间戳 - 开始时间戳）
     :param id_: str，醒目留言ID，删除时用
     :param gift_id: 礼物ID
     :param gift_name: 礼物名
@@ -355,7 +407,7 @@ class SuperChatMessage:
         self,
         price: int = None,
         message: str = None,
-        message_jpn: str = None,
+        message_trans: str = None,
         start_time: int = None,
         end_time: int = None,
         time: int = None,
@@ -375,7 +427,7 @@ class SuperChatMessage:
     ):
         self.price: int = price
         self.message: str = message
-        self.message_jpn: str = message_jpn
+        self.message_trans: str = message_trans
         self.start_time: int = start_time
         self.end_time: int = end_time
         self.time: int = time
@@ -398,7 +450,7 @@ class SuperChatMessage:
         return cls(
             price=data['price'],
             message=data['message'],
-            message_jpn=data['message_trans'],
+            message_trans=data['message_trans'],
             start_time=data['start_time'],
             end_time=data['end_time'],
             time=data['time'],

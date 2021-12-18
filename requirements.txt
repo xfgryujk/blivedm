@@ -1,1 +1,2 @@
 aiohttp==3.7.4
+Brotli==1.0.9
