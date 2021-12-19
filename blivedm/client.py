@@ -540,6 +540,8 @@ class BLiveClient:
                     try:
                         body = json.loads(body.decode('utf-8'))
                         await self._handle_command(body)
+                    except asyncio.CancelledError:
+                        raise
                     except Exception:
                         logger.error('room=%d, body=%s', self.room_id, body)
                         raise
