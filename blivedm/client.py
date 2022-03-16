@@ -569,14 +569,23 @@ class BLiveClient:
         :param command: 业务消息
         """
         # 外部代码可能不能正常处理取消，所以这里加shield
-        results = await asyncio.shield(
-            asyncio.gather(
-                *(handler.handle(self, command) for handler in self._handlers),
-                loop=self._loop,
-                return_exceptions=True
-            ),
-            loop=self._loop
-        )
+        import sys
+        if sys.version_info.major == 3 and sys.version_info.minor >= 10:
+            results = await asyncio.shield(
+                asyncio.gather(
+                    *(handler.handle(self, command) for handler in self._handlers),
+                    return_exceptions=True
+                )
+            )
+        else:
+            results = await asyncio.shield(
+                asyncio.gather(
+                    *(handler.handle(self, command) for handler in self._handlers),
+                    loop=self._loop,
+                    return_exceptions=True
+                ),
+                loop=self._loop
+            )
         for res in results:
             if isinstance(res, Exception):
                 logger.exception('room=%d _handle_command() failed, command=%s', self.room_id, command, exc_info=res)
