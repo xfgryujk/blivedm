@@ -9,6 +9,7 @@ __all__ = (
     'GuardBuyMessage',
     'SuperChatMessage',
     'SuperChatDeleteMessage',
+    'RoomBlockMessage',
 )
 
 
@@ -487,4 +488,34 @@ class SuperChatDeleteMessage:
     def from_command(cls, data: dict):
         return cls(
             ids=data['ids'],
+        )
+
+class RoomBlockMessage:
+    """
+    拉黑消息
+
+    :param uid: 被拉黑用户的uid
+    :param uname: 被拉黑用户的用户名
+    :param operator: 拉黑操作者，2为主播，其它未知
+    :param dmscore: 未知参数
+    """
+    def __init__(
+        self,
+        uid: int = None,
+        uname: str = None,
+        operator: int = None,
+        dmscore: int = None,
+    ):
+        self.uid: int = uid
+        self.uname: str = uname
+        self.operator: int = operator
+        self.dmscore: int = dmscore
+    
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            uid=data['uid'],
+            uname=data['uname'],
+            operator=data['operator'],
+            dmscore=data['dmscore'],
         )
