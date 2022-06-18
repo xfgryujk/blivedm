@@ -266,8 +266,17 @@ class BLiveClient:
 
     async def _init_room_id_and_owner(self):
         try:
-            async with self._session.get(ROOM_INIT_URL, params={'room_id': self._tmp_room_id},
-                                         ssl=self._ssl) as res:
+            async with self._session.get(
+                ROOM_INIT_URL,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
+                                  ' Chrome/102.0.0.0 Safari/537.36'
+                },
+                params={
+                    'room_id': self._tmp_room_id
+                },
+                ssl=self._ssl
+            ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _init_room_id_and_owner() failed, status=%d, reason=%s', self._tmp_room_id,
                                    res.status, res.reason)
@@ -293,8 +302,18 @@ class BLiveClient:
 
     async def _init_host_server(self):
         try:
-            async with self._session.get(DANMAKU_SERVER_CONF_URL, params={'id': self._room_id, 'type': 0},
-                                         ssl=self._ssl) as res:
+            async with self._session.get(
+                DANMAKU_SERVER_CONF_URL,
+                headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
+                                  ' Chrome/102.0.0.0 Safari/537.36'
+                },
+                params={
+                    'id': self._room_id,
+                    'type': 0
+                },
+                ssl=self._ssl
+            ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', self._room_id,
                                    res.status, res.reason)
@@ -368,6 +387,10 @@ class BLiveClient:
                 host_server = self._host_server_list[retry_count % len(self._host_server_list)]
                 async with self._session.ws_connect(
                     f"wss://{host_server['host']}:{host_server['wss_port']}/sub",
+                    headers={
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
+                                      ' Chrome/102.0.0.0 Safari/537.36'
+                    },
                     receive_timeout=self._heartbeat_interval + 5,
                     ssl=self._ssl
                 ) as websocket:
