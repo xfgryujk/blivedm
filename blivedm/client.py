@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import asyncio
-import collections
 import enum
 import json
 import logging
@@ -26,7 +25,14 @@ DEFAULT_DANMAKU_SERVER_LIST = [
 ]
 
 HEADER_STRUCT = struct.Struct('>I2H2I')
-HeaderTuple = collections.namedtuple('HeaderTuple', ('pack_len', 'raw_header_size', 'ver', 'operation', 'seq_id'))
+
+
+class HeaderTuple(NamedTuple):
+    pack_len: int
+    raw_header_size: int
+    ver: int
+    operation: int
+    seq_id: int
 
 
 # WS_BODY_PROTOCOL_VERSION
@@ -95,8 +101,8 @@ class BLiveClient:
         heartbeat_interval=30,
         ssl: Union[bool, ssl_.SSLContext] = True,
     ):
-        # 用来init_room的临时房间ID，可以用短ID
         self._tmp_room_id = room_id
+        """用来init_room的临时房间ID，可以用短ID"""
         self._uid = uid
 
         if session is None:
@@ -110,29 +116,31 @@ class BLiveClient:
         self._heartbeat_interval = heartbeat_interval
         self._ssl = ssl if ssl else ssl_._create_unverified_context()  # noqa
 
-        # 消息处理器，可动态增删
         self._handlers: List[handlers.HandlerInterface] = []
+        """消息处理器，可动态增删"""
 
         # 在调用init_room后初始化的字段
-        # 真实房间ID
         self._room_id = None
-        # 房间短ID，没有则为0
+        """真实房间ID"""
         self._room_short_id = None
-        # 主播用户ID
+        """房间短ID，没有则为0"""
         self._room_owner_uid = None
-        # 弹幕服务器列表
-        # [{host: "tx-bj4-live-comet-04.chat.bilibili.com", port: 2243, wss_port: 443, ws_port: 2244}, ...]
+        """主播用户ID"""
         self._host_server_list: Optional[List[dict]] = None
-        # 连接弹幕服务器用的token
+        """
+        弹幕服务器列表
+        [{host: "tx-bj4-live-comet-04.chat.bilibili.com", port: 2243, wss_port: 443, ws_port: 2244}, ...]
+        """
         self._host_server_token = None
+        """连接弹幕服务器用的token"""
 
         # 在运行时初始化的字段
-        # websocket连接
         self._websocket: Optional[aiohttp.ClientWebSocketResponse] = None
-        # 网络协程的future
+        """WebSocket连接"""
         self._network_future: Optional[asyncio.Future] = None
-        # 发心跳包定时器的handle
+        """网络协程的future"""
         self._heartbeat_timer_handle: Optional[asyncio.TimerHandle] = None
+        """发心跳包定时器的handle"""
 
     @property
     def is_running(self) -> bool:
@@ -192,7 +200,7 @@ class BLiveClient:
             logger.warning('room=%s client is running, cannot start() again', self.room_id)
             return
 
-        self._network_future = asyncio.ensure_future(self._network_coroutine_wrapper())
+        self._network_future = asyncio.create_task(self._network_coroutine_wrapper())
 
     def stop(self):
         """
@@ -355,7 +363,7 @@ class BLiveClient:
         except asyncio.CancelledError:
             # 正常停止
             pass
-        except Exception as e:  # noqa
+        except Exception:  # noqa
             logger.exception('room=%s _network_coroutine() finished with exception:', self.room_id)
         finally:
             logger.debug('room=%s _network_coroutine() finished', self.room_id)
@@ -416,7 +424,7 @@ class BLiveClient:
 
     async def _on_ws_connect(self):
         """
-        websocket连接成功
+        WebSocket连接成功
         """
         await self._send_auth()
         self._heartbeat_timer_handle = asyncio.get_running_loop().call_later(
@@ -425,7 +433,7 @@ class BLiveClient:
 
     async def _on_ws_close(self):
         """
-        websocket连接断开
+        WebSocket连接断开
         """
         if self._heartbeat_timer_handle is not None:
             self._heartbeat_timer_handle.cancel()
@@ -457,7 +465,7 @@ class BLiveClient:
         self._heartbeat_timer_handle = asyncio.get_running_loop().call_later(
             self._heartbeat_interval, self._on_send_heartbeat
         )
-        asyncio.ensure_future(self._send_heartbeat())
+        asyncio.create_task(self._send_heartbeat())
 
     async def _send_heartbeat(self):
         """
@@ -475,9 +483,9 @@ class BLiveClient:
 
     async def _on_ws_message(self, message: aiohttp.WSMessage):
         """
-        收到websocket消息
+        收到WebSocket消息
 
-        :param message: websocket消息
+        :param message: WebSocket消息
         """
         if message.type != aiohttp.WSMsgType.BINARY:
             logger.warning('room=%d unknown websocket message type=%s, data=%s', self.room_id,
@@ -494,9 +502,9 @@ class BLiveClient:
 
     async def _parse_ws_message(self, data: bytes):
         """
-        解析websocket消息
+        解析WebSocket消息
 
-        :param data: websocket消息数据
+        :param data: WebSocket消息数据
         """
         offset = 0
         try:

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import dataclasses
 import json
 from typing import *
 
@@ -12,18 +13,14 @@ __all__ = (
 )
 
 
+@dataclasses.dataclass
 class HeartbeatMessage:
     """
     心跳消息
-
-    :param popularity: 人气值
     """
 
-    def __init__(
-        self,
-        popularity: int = None,
-    ):
-        self.popularity: int = popularity
+    popularity: int = None
+    """人气值"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -32,132 +29,84 @@ class HeartbeatMessage:
         )
 
 
+@dataclasses.dataclass
 class DanmakuMessage:
     """
     弹幕消息
-
-    :param mode: 弹幕显示模式（滚动、顶部、底部）
-    :param font_size: 字体尺寸
-    :param color: 颜色
-    :param timestamp: 时间戳（毫秒）
-    :param rnd: 随机数，前端叫作弹幕ID，可能是去重用的
-    :param uid_crc32: 用户ID文本的CRC32
-    :param msg_type: 是否礼物弹幕（节奏风暴）
-    :param bubble: 右侧评论栏气泡
-    :param dm_type: 弹幕类型，0文本，1表情，2语音
-    :param emoticon_options: 表情参数
-    :param voice_config: 语音参数
-    :param mode_info: 一些附加参数
-
-    :param msg: 弹幕内容
-
-    :param uid: 用户ID
-    :param uname: 用户名
-    :param admin: 是否房管
-    :param vip: 是否月费老爷
-    :param svip: 是否年费老爷
-    :param urank: 用户身份，用来判断是否正式会员，猜测非正式会员为5000，正式会员为10000
-    :param mobile_verify: 是否绑定手机
-    :param uname_color: 用户名颜色
-
-    :param medal_level: 勋章等级
-    :param medal_name: 勋章名
-    :param runame: 勋章房间主播名
-    :param medal_room_id: 勋章房间ID
-    :param mcolor: 勋章颜色
-    :param special_medal: 特殊勋章
-
-    :param user_level: 用户等级
-    :param ulevel_color: 用户等级颜色
-    :param ulevel_rank: 用户等级排名，>50000时为'>50000'
-
-    :param old_title: 旧头衔
-    :param title: 头衔
-
-    :param privilege_type: 舰队类型，0非舰队，1总督，2提督，3舰长
     """
 
-    def __init__(
-        self,
-        mode: int = None,
-        font_size: int = None,
-        color: int = None,
-        timestamp: int = None,
-        rnd: int = None,
-        uid_crc32: str = None,
-        msg_type: int = None,
-        bubble: int = None,
-        dm_type: int = None,
-        emoticon_options: Union[dict, str] = None,
-        voice_config: Union[dict, str] = None,
-        mode_info: dict = None,
+    mode: int = None
+    """弹幕显示模式（滚动、顶部、底部）"""
+    font_size: int = None
+    """字体尺寸"""
+    color: int = None
+    """颜色"""
+    timestamp: int = None
+    """时间戳（毫秒）"""
+    rnd: int = None
+    """随机数，前端叫作弹幕ID，可能是去重用的"""
+    uid_crc32: str = None
+    """用户ID文本的CRC32"""
+    msg_type: int = None
+    """是否礼物弹幕（节奏风暴）"""
+    bubble: int = None
+    """右侧评论栏气泡"""
+    dm_type: int = None
+    """弹幕类型，0文本，1表情，2语音"""
+    emoticon_options: Union[dict, str] = None
+    """表情参数"""
+    voice_config: Union[dict, str] = None
+    """语音参数"""
+    mode_info: dict = None
+    """一些附加参数"""
 
-        msg: str = None,
+    msg: str = None
+    """弹幕内容"""
 
-        uid: int = None,
-        uname: str = None,
-        admin: int = None,
-        vip: int = None,
-        svip: int = None,
-        urank: int = None,
-        mobile_verify: int = None,
-        uname_color: str = None,
+    uid: int = None
+    """用户ID"""
+    uname: str = None
+    """用户名"""
+    admin: int = None
+    """是否房管"""
+    vip: int = None
+    """是否月费老爷"""
+    svip: int = None
+    """是否年费老爷"""
+    urank: int = None
+    """用户身份，用来判断是否正式会员，猜测非正式会员为5000，正式会员为10000"""
+    mobile_verify: int = None
+    """是否绑定手机"""
+    uname_color: str = None
+    """用户名颜色"""
 
-        medal_level: str = None,
-        medal_name: str = None,
-        runame: str = None,
-        medal_room_id: int = None,
-        mcolor: int = None,
-        special_medal: str = None,
+    medal_level: str = None
+    """勋章等级"""
+    medal_name: str = None
+    """勋章名"""
+    runame: str = None
+    """勋章房间主播名"""
+    medal_room_id: int = None
+    """勋章房间ID"""
+    mcolor: int = None
+    """勋章颜色"""
+    special_medal: str = None
+    """特殊勋章"""
 
-        user_level: int = None,
-        ulevel_color: int = None,
-        ulevel_rank: str = None,
+    user_level: int = None
+    """用户等级"""
+    ulevel_color: int = None
+    """用户等级颜色"""
+    ulevel_rank: str = None
+    """用户等级排名，>50000时为'>50000'"""
 
-        old_title: str = None,
-        title: str = None,
+    old_title: str = None
+    """旧头衔"""
+    title: str = None
+    """头衔"""
 
-        privilege_type: int = None,
-    ):
-        self.mode: int = mode
-        self.font_size: int = font_size
-        self.color: int = color
-        self.timestamp: int = timestamp
-        self.rnd: int = rnd
-        self.uid_crc32: str = uid_crc32
-        self.msg_type: int = msg_type
-        self.bubble: int = bubble
-        self.dm_type: int = dm_type
-        self.emoticon_options: Union[dict, str] = emoticon_options
-        self.voice_config: Union[dict, str] = voice_config
-        self.mode_info: dict = mode_info
-
-        self.msg: str = msg
-
-        self.uid: int = uid
-        self.uname: str = uname
-        self.admin: int = admin
-        self.vip: int = vip
-        self.svip: int = svip
-        self.urank: int = urank
-        self.mobile_verify: int = mobile_verify
-        self.uname_color: str = uname_color
-
-        self.medal_level: str = medal_level
-        self.medal_name: str = medal_name
-        self.runame: str = runame
-        self.medal_room_id: int = medal_room_id
-        self.mcolor: int = mcolor
-        self.special_medal: str = special_medal
-
-        self.user_level: int = user_level
-        self.ulevel_color: int = ulevel_color
-        self.ulevel_rank: str = ulevel_rank
-
-        self.old_title: str = old_title
-        self.title: str = title
-
-        self.privilege_type: int = privilege_type
+    privilege_type: int = None
+    """舰队类型，0非舰队，1总督，2提督，3舰长"""
 
     @classmethod
     def from_command(cls, info: dict):
@@ -250,60 +199,42 @@ class DanmakuMessage:
             return {}
 
 
+@dataclasses.dataclass
 class GiftMessage:
     """
     礼物消息
-
-    :param gift_name: 礼物名
-    :param num: 数量
-    :param uname: 用户名
-    :param face: 用户头像URL
-    :param guard_level: 舰队等级，0非舰队，1总督，2提督，3舰长
-    :param uid: 用户ID
-    :param timestamp: 时间戳
-    :param gift_id: 礼物ID
-    :param gift_type: 礼物类型（未知）
-    :param action: 目前遇到的有'喂食'、'赠送'
-    :param price: 礼物单价瓜子数
-    :param rnd: 随机数，可能是去重用的。有时是时间戳+去重ID，有时是UUID
-    :param coin_type: 瓜子类型，'silver'或'gold'，1000金瓜子 = 1元
-    :param total_coin: 总瓜子数
-    :param tid: 可能是事务ID，有时和rnd相同
     """
 
-    def __init__(
-        self,
-        gift_name: str = None,
-        num: int = None,
-        uname: str = None,
-        face: str = None,
-        guard_level: int = None,
-        uid: int = None,
-        timestamp: int = None,
-        gift_id: int = None,
-        gift_type: int = None,
-        action: str = None,
-        price: int = None,
-        rnd: str = None,
-        coin_type: str = None,
-        total_coin: int = None,
-        tid: str = None,
-    ):
-        self.gift_name = gift_name
-        self.num = num
-        self.uname = uname
-        self.face = face
-        self.guard_level = guard_level
-        self.uid = uid
-        self.timestamp = timestamp
-        self.gift_id = gift_id
-        self.gift_type = gift_type
-        self.action = action
-        self.price = price
-        self.rnd = rnd
-        self.coin_type = coin_type
-        self.total_coin = total_coin
-        self.tid = tid
+    gift_name: str = None
+    """礼物名"""
+    num: int = None
+    """数量"""
+    uname: str = None
+    """用户名"""
+    face: str = None
+    """用户头像URL"""
+    guard_level: int = None
+    """舰队等级，0非舰队，1总督，2提督，3舰长"""
+    uid: int = None
+    """用户ID"""
+    timestamp: int = None
+    """时间戳"""
+    gift_id: int = None
+    """礼物ID"""
+    gift_type: int = None
+    """礼物类型（未知）"""
+    action: str = None
+    """目前遇到的有'喂食'、'赠送'"""
+    price: int = None
+    """礼物单价瓜子数"""
+    rnd: str = None
+    """随机数，可能是去重用的。有时是时间戳+去重ID，有时是UUID"""
+    coin_type: str = None
+    """瓜子类型，'silver'或'gold'，1000金瓜子 = 1元"""
+    total_coin: int = None
+    """总瓜子数"""
+    tid: str = None
+    """可能是事务ID，有时和rnd相同"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -326,42 +257,30 @@ class GiftMessage:
         )
 
 
+@dataclasses.dataclass
 class GuardBuyMessage:
     """
     上舰消息
-
-    :param uid: 用户ID
-    :param username: 用户名
-    :param guard_level: 舰队等级，0非舰队，1总督，2提督，3舰长
-    :param num: 数量
-    :param price: 单价金瓜子数
-    :param gift_id: 礼物ID
-    :param gift_name: 礼物名
-    :param start_time: 开始时间戳，和结束时间戳相同
-    :param end_time: 结束时间戳，和开始时间戳相同
     """
 
-    def __init__(
-        self,
-        uid: int = None,
-        username: str = None,
-        guard_level: int = None,
-        num: int = None,
-        price: int = None,
-        gift_id: int = None,
-        gift_name: str = None,
-        start_time: int = None,
-        end_time: int = None,
-    ):
-        self.uid: int = uid
-        self.username: str = username
-        self.guard_level: int = guard_level
-        self.num: int = num
-        self.price: int = price
-        self.gift_id: int = gift_id
-        self.gift_name: str = gift_name
-        self.start_time: int = start_time
-        self.end_time: int = end_time
+    uid: int = None
+    """用户ID"""
+    username: str = None
+    """用户名"""
+    guard_level: int = None
+    """舰队等级，0非舰队，1总督，2提督，3舰长"""
+    num: int = None
+    """数量"""
+    price: int = None
+    """单价金瓜子数"""
+    gift_id: int = None
+    """礼物ID"""
+    gift_name: str = None
+    """礼物名"""
+    start_time: int = None
+    """开始时间戳，和结束时间戳相同"""
+    end_time: int = None
+    """结束时间戳，和开始时间戳相同"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -378,72 +297,50 @@ class GuardBuyMessage:
         )
 
 
+@dataclasses.dataclass
 class SuperChatMessage:
     """
     醒目留言消息
-
-    :param price: 价格（人民币）
-    :param message: 消息
-    :param message_trans: 消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）
-    :param start_time: 开始时间戳
-    :param end_time: 结束时间戳
-    :param time: 剩余时间（约等于 结束时间戳 - 开始时间戳）
-    :param id_: str，醒目留言ID，删除时用
-    :param gift_id: 礼物ID
-    :param gift_name: 礼物名
-    :param uid: 用户ID
-    :param uname: 用户名
-    :param face: 用户头像URL
-    :param guard_level: 舰队等级，0非舰队，1总督，2提督，3舰长
-    :param user_level: 用户等级
-    :param background_bottom_color: 底部背景色，'#rrggbb'
-    :param background_color: 背景色，'#rrggbb'
-    :param background_icon: 背景图标
-    :param background_image: 背景图URL
-    :param background_price_color: 背景价格颜色，'#rrggbb'
     """
 
-    def __init__(
-        self,
-        price: int = None,
-        message: str = None,
-        message_trans: str = None,
-        start_time: int = None,
-        end_time: int = None,
-        time: int = None,
-        id_: int = None,
-        gift_id: int = None,
-        gift_name: str = None,
-        uid: int = None,
-        uname: str = None,
-        face: str = None,
-        guard_level: int = None,
-        user_level: int = None,
-        background_bottom_color: str = None,
-        background_color: str = None,
-        background_icon: str = None,
-        background_image: str = None,
-        background_price_color: str = None,
-    ):
-        self.price: int = price
-        self.message: str = message
-        self.message_trans: str = message_trans
-        self.start_time: int = start_time
-        self.end_time: int = end_time
-        self.time: int = time
-        self.id: int = id_
-        self.gift_id: int = gift_id
-        self.gift_name: str = gift_name
-        self.uid: int = uid
-        self.uname: str = uname
-        self.face: str = face
-        self.guard_level: int = guard_level
-        self.user_level: int = user_level
-        self.background_bottom_color: str = background_bottom_color
-        self.background_color: str = background_color
-        self.background_icon: str = background_icon
-        self.background_image: str = background_image
-        self.background_price_color: str = background_price_color
+    price: int = None
+    """价格（人民币）"""
+    message: str = None
+    """消息"""
+    message_trans: str = None
+    """消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）"""
+    start_time: int = None
+    """开始时间戳"""
+    end_time: int = None
+    """结束时间戳"""
+    time: int = None
+    """剩余时间（约等于 结束时间戳 - 开始时间戳）"""
+    id: int = None
+    """醒目留言ID，删除时用"""
+    gift_id: int = None
+    """礼物ID"""
+    gift_name: str = None
+    """礼物名"""
+    uid: int = None
+    """用户ID"""
+    uname: str = None
+    """用户名"""
+    face: str = None
+    """用户头像URL"""
+    guard_level: int = None
+    """舰队等级，0非舰队，1总督，2提督，3舰长"""
+    user_level: int = None
+    """用户等级"""
+    background_bottom_color: str = None
+    """底部背景色，'#rrggbb'"""
+    background_color: str = None
+    """背景色，'#rrggbb'"""
+    background_icon: str = None
+    """背景图标"""
+    background_image: str = None
+    """背景图URL"""
+    background_price_color: str = None
+    """背景价格颜色，'#rrggbb'"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -454,7 +351,7 @@ class SuperChatMessage:
             start_time=data['start_time'],
             end_time=data['end_time'],
             time=data['time'],
-            id_=data['id'],
+            id=data['id'],
             gift_id=data['gift']['gift_id'],
             gift_name=data['gift']['gift_name'],
             uid=data['uid'],
@@ -470,18 +367,14 @@ class SuperChatMessage:
         )
 
 
+@dataclasses.dataclass
 class SuperChatDeleteMessage:
     """
     删除醒目留言消息
-
-    :param ids: 醒目留言ID数组
     """
 
-    def __init__(
-        self,
-        ids: List[int] = None,
-    ):
-        self.ids: List[int] = ids
+    ids: List[int] = None
+    """醒目留言ID数组"""
 
     @classmethod
     def from_command(cls, data: dict):

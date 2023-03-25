@@ -12,7 +12,6 @@ __all__ = (
 
 logger = logging.getLogger('blivedm')
 
-# 常见可忽略的cmd
 IGNORED_CMDS = (
     'COMBO_SEND',
     'ENTRY_EFFECT',
@@ -38,9 +37,10 @@ IGNORED_CMDS = (
     'SUPER_CHAT_MESSAGE_JPN',
     'WIDGET_BANNER',
 )
+"""常见可忽略的cmd"""
 
-# 已打日志的未知cmd
 logged_unknown_cmds = set()
+"""已打日志的未知cmd"""
 
 
 class HandlerInterface:
@@ -75,7 +75,6 @@ class BaseHandler(HandlerInterface):
     def __super_chat_message_delete_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_super_chat_delete(client, models.SuperChatDeleteMessage.from_command(command['data']))
 
-    # cmd -> 处理回调
     _CMD_CALLBACK_DICT: Dict[
         str,
         Optional[Callable[
@@ -97,6 +96,7 @@ class BaseHandler(HandlerInterface):
         # 删除醒目留言
         'SUPER_CHAT_MESSAGE_DELETE': __super_chat_message_delete_callback,
     }
+    """cmd -> 处理回调"""
     # 忽略其他常见cmd
     for cmd in IGNORED_CMDS:
         _CMD_CALLBACK_DICT[cmd] = None
