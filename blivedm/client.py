@@ -444,7 +444,7 @@ class BLiveClient:
         发送认证包
         """
         auth_params = {
-            'uid': self._uid,
+            'uid': self._uid or self.room_owner_uid or 0,
             'roomid': self._room_id,
             'protover': 3,
             'platform': 'web',
