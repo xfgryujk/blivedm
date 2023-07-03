@@ -134,8 +134,7 @@ class DanmakuMessage:
 
         try:
             face = pb_models.DanmakuMessageV2.loads(base64.b64decode(command['dm_v2'])).user.face
-        except Exception as err:
-            print(err)
+        except:
             face = None
         """
         示例：
