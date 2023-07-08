@@ -61,7 +61,7 @@ class BaseHandler(HandlerInterface):
         return self._on_heartbeat(client, models.HeartbeatMessage.from_command(command['data']))
 
     def __danmu_msg_callback(self, client: client_.BLiveClient, command: dict):
-        return self._on_danmaku(client, models.DanmakuMessage.from_command(command['info']))
+        return self._on_danmaku(client, models.DanmakuMessage.from_command(command))
 
     def __send_gift_callback(self, client: client_.BLiveClient, command: dict):
         return self._on_gift(client, models.GiftMessage.from_command(command['data']))
