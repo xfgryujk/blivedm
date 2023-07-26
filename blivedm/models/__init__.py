@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
+import base64
+import binascii
 import dataclasses
 import json
-import base64
 from typing import *
 
-from . import pb_models
+from . import pb
 
 __all__ = (
     'HeartbeatMessage',
@@ -114,9 +115,18 @@ class DanmakuMessage:
     """舰队类型，0非舰队，1总督，2提督，3舰长"""
 
     @classmethod
-    def from_command(cls, command: dict):
-        info = command['info']
-    
+    def from_command(cls, info: list, dm_v2=''):
+        proto: Optional[pb.SimpleDm] = None
+        if dm_v2 != '':
+            try:
+                proto = pb.SimpleDm.loads(base64.b64decode(dm_v2))
+            except (binascii.Error, KeyError, TypeError, ValueError):
+                pass
+        if proto is not None:
+            face = proto.user.face
+        else:
+            face = ''
+
         if len(info[3]) != 0:
             medal_level = info[3][0]
             medal_name = info[3][1]
@@ -132,19 +142,6 @@ class DanmakuMessage:
             mcolor = 0
             special_medal = 0
 
-        try:
-            face = pb_models.DanmakuMessageV2.loads(base64.b64decode(command['dm_v2'])).user.face
-        except:
-            face = None
-        """
-        示例：
-        {'dm_v2': 'CiIxMmM2ZDg4MGQ5Yjc3Njc3NTI1NTA1NjFjYjY0YTJmYjU5EAEYGSDP2v8HKghkODU4ZWQ3MzIG5ZGc5ZGcOMHUk+WRMU
-         jl2cv+AWIAaAFydwoG5ZGc5ZGcEm0KE3Jvb21fMTA0MTMwNTFfMzY5NDkSSmh0dHBzOi8vaTAuaGRzbGIuY29tL2Jmcy9nYXJiLzMxYj
-         I4ZjRlZjQ0NmYxNmYzZDEyZGU3ZTYzMmFlNjBhMmE0NDAyZWIucG5nGAEgASgBMKIBOKIBigEAmgEQCghFRTQ5MzU1OBCd9oulBqIBpQ
-         EIwofiBBIP5biD5LiB55Wq6IyE6IyEIkpodHRwczovL2kwLmhkc2xiLmNvbS9iZnMvZmFjZS9mY2NjY2MxOTQ3N2M0YzYzMGE0MjMwMj
-         liYmViYjk1N2NkZGFkOWMyLmpwZziQTkABWiMIERIJ54ix6I2U5LidIKS6ngYwpLqeBjikup4GQKS6ngZQAWIPCBUQ3q3iAhoGPjUwMD
-         AwagByAHoCCB+qARoIt+vxwQQSDeiNlOaenVl1cmliaXUY+8f7BA=='}
-        """
         return cls(
             mode=info[0][1],
             font_size=info[0][2],
