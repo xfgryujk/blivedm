@@ -23,7 +23,7 @@ class HeartbeatMessage:
     心跳消息
     """
 
-    popularity: int = None
+    popularity: int = 0
     """人气值"""
 
     @classmethod
@@ -39,79 +39,79 @@ class DanmakuMessage:
     弹幕消息
     """
 
-    mode: int = None
+    mode: int = 0
     """弹幕显示模式（滚动、顶部、底部）"""
-    font_size: int = None
+    font_size: int = 0
     """字体尺寸"""
-    color: int = None
+    color: int = 0
     """颜色"""
-    timestamp: int = None
+    timestamp: int = 0
     """时间戳（毫秒）"""
-    rnd: int = None
+    rnd: int = 0
     """随机数，前端叫作弹幕ID，可能是去重用的"""
-    uid_crc32: str = None
+    uid_crc32: str = ''
     """用户ID文本的CRC32"""
-    msg_type: int = None
+    msg_type: int = 0
     """是否礼物弹幕（节奏风暴）"""
-    bubble: int = None
+    bubble: int = 0
     """右侧评论栏气泡"""
-    dm_type: int = None
+    dm_type: int = 0
     """弹幕类型，0文本，1表情，2语音"""
-    emoticon_options: Union[dict, str] = None
+    emoticon_options: Union[dict, str] = ''
     """表情参数"""
-    voice_config: Union[dict, str] = None
+    voice_config: Union[dict, str] = ''
     """语音参数"""
-    mode_info: dict = None
+    mode_info: dict = dataclasses.field(default_factory=dict)
     """一些附加参数"""
 
-    msg: str = None
+    msg: str = ''
     """弹幕内容"""
 
-    uid: int = None
+    uid: int = 0
     """用户ID"""
-    uname: str = None
+    uname: str = ''
     """用户名"""
-    face: str = None
+    face: str = ''
     """用户头像URL"""
-    admin: int = None
+    admin: int = 0
     """是否房管"""
-    vip: int = None
+    vip: int = 0
     """是否月费老爷"""
-    svip: int = None
+    svip: int = 0
     """是否年费老爷"""
-    urank: int = None
+    urank: int = 0
     """用户身份，用来判断是否正式会员，猜测非正式会员为5000，正式会员为10000"""
-    mobile_verify: int = None
+    mobile_verify: int = 0
     """是否绑定手机"""
-    uname_color: str = None
+    uname_color: str = ''
     """用户名颜色"""
 
-    medal_level: str = None
+    medal_level: str = ''
     """勋章等级"""
-    medal_name: str = None
+    medal_name: str = ''
     """勋章名"""
-    runame: str = None
+    runame: str = ''
     """勋章房间主播名"""
-    medal_room_id: int = None
+    medal_room_id: int = 0
     """勋章房间ID"""
-    mcolor: int = None
+    mcolor: int = 0
     """勋章颜色"""
-    special_medal: str = None
+    special_medal: str = ''
     """特殊勋章"""
 
-    user_level: int = None
+    user_level: int = 0
     """用户等级"""
-    ulevel_color: int = None
+    ulevel_color: int = 0
     """用户等级颜色"""
-    ulevel_rank: str = None
+    ulevel_rank: str = ''
     """用户等级排名，>50000时为'>50000'"""
 
-    old_title: str = None
+    old_title: str = ''
     """旧头衔"""
-    title: str = None
+    title: str = ''
     """头衔"""
 
-    privilege_type: int = None
+    privilege_type: int = 0
     """舰队类型，0非舰队，1总督，2提督，3舰长"""
 
     @classmethod
@@ -223,35 +223,35 @@ class GiftMessage:
     礼物消息
     """
 
-    gift_name: str = None
+    gift_name: str = ''
     """礼物名"""
-    num: int = None
+    num: int = 0
     """数量"""
-    uname: str = None
+    uname: str = ''
     """用户名"""
-    face: str = None
+    face: str = ''
     """用户头像URL"""
-    guard_level: int = None
+    guard_level: int = 0
     """舰队等级，0非舰队，1总督，2提督，3舰长"""
-    uid: int = None
+    uid: int = 0
     """用户ID"""
-    timestamp: int = None
+    timestamp: int = 0
     """时间戳"""
-    gift_id: int = None
+    gift_id: int = 0
     """礼物ID"""
-    gift_type: int = None
+    gift_type: int = 0
     """礼物类型（未知）"""
-    action: str = None
+    action: str = ''
     """目前遇到的有'喂食'、'赠送'"""
-    price: int = None
+    price: int = 0
     """礼物单价瓜子数"""
-    rnd: str = None
+    rnd: str = ''
     """随机数，可能是去重用的。有时是时间戳+去重ID，有时是UUID"""
-    coin_type: str = None
+    coin_type: str = ''
     """瓜子类型，'silver'或'gold'，1000金瓜子 = 1元"""
-    total_coin: int = None
+    total_coin: int = 0
     """总瓜子数"""
-    tid: str = None
+    tid: str = ''
     """可能是事务ID，有时和rnd相同"""
 
     @classmethod
@@ -281,23 +281,23 @@ class GuardBuyMessage:
     上舰消息
     """
 
-    uid: int = None
+    uid: int = 0
     """用户ID"""
-    username: str = None
+    username: str = ''
     """用户名"""
-    guard_level: int = None
+    guard_level: int = 0
     """舰队等级，0非舰队，1总督，2提督，3舰长"""
-    num: int = None
+    num: int = 0
     """数量"""
-    price: int = None
+    price: int = 0
     """单价金瓜子数"""
-    gift_id: int = None
+    gift_id: int = 0
     """礼物ID"""
-    gift_name: str = None
+    gift_name: str = ''
     """礼物名"""
-    start_time: int = None
+    start_time: int = 0
     """开始时间戳，和结束时间戳相同"""
-    end_time: int = None
+    end_time: int = 0
     """结束时间戳，和开始时间戳相同"""
 
     @classmethod
@@ -321,43 +321,43 @@ class SuperChatMessage:
     醒目留言消息
     """
 
-    price: int = None
+    price: int = 0
     """价格（人民币）"""
-    message: str = None
+    message: str = ''
     """消息"""
-    message_trans: str = None
+    message_trans: str = ''
     """消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）"""
-    start_time: int = None
+    start_time: int = 0
     """开始时间戳"""
-    end_time: int = None
+    end_time: int = 0
     """结束时间戳"""
-    time: int = None
+    time: int = 0
     """剩余时间（约等于 结束时间戳 - 开始时间戳）"""
-    id: int = None
+    id: int = 0
     """醒目留言ID，删除时用"""
-    gift_id: int = None
+    gift_id: int = 0
     """礼物ID"""
-    gift_name: str = None
+    gift_name: str = ''
     """礼物名"""
-    uid: int = None
+    uid: int = 0
     """用户ID"""
-    uname: str = None
+    uname: str = ''
     """用户名"""
-    face: str = None
+    face: str = ''
     """用户头像URL"""
-    guard_level: int = None
+    guard_level: int = 0
     """舰队等级，0非舰队，1总督，2提督，3舰长"""
-    user_level: int = None
+    user_level: int = 0
     """用户等级"""
-    background_bottom_color: str = None
+    background_bottom_color: str = ''
     """底部背景色，'#rrggbb'"""
-    background_color: str = None
+    background_color: str = ''
     """背景色，'#rrggbb'"""
-    background_icon: str = None
+    background_icon: str = ''
     """背景图标"""
-    background_image: str = None
+    background_image: str = ''
     """背景图URL"""
-    background_price_color: str = None
+    background_price_color: str = ''
     """背景价格颜色，'#rrggbb'"""
 
     @classmethod
@@ -391,7 +391,7 @@ class SuperChatDeleteMessage:
     删除醒目留言消息
     """
 
-    ids: List[int] = None
+    ids: List[int] = dataclasses.field(default_factory=list)
     """醒目留言ID数组"""
 
     @classmethod
