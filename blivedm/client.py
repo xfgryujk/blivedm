@@ -233,6 +233,10 @@ class BLiveClient:
         """
         便利函数，停止本客户端并释放本客户端的资源，调用后本客户端将不可用
         """
+
+        if self._open_live_client:
+            await self._open_live_client.end()
+
         if self.is_running:
             self.stop()
             await self.join()
@@ -517,6 +521,13 @@ class BLiveClient:
 
         try:
             await self._websocket.send_bytes(self._make_packet({}, Operation.HEARTBEAT))
+        except (ConnectionResetError, aiohttp.ClientConnectionError) as e:
+            logger.warning('room=%d _send_heartbeat() failed: %r', self.room_id, e)
+        except Exception:  # noqa
+            logger.exception('room=%d _send_heartbeat() failed:', self.room_id)
+
+        try:
+            await self._open_live_client.heartbeat()
         except (ConnectionResetError, aiohttp.ClientConnectionError) as e:
             logger.warning('room=%d _send_heartbeat() failed: %r', self.room_id, e)
         except Exception:  # noqa

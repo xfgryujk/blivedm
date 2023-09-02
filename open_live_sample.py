@@ -25,8 +25,8 @@ async def run_start():
 
     client.start()
     try:
-        # 演示60秒后停止
-        await asyncio.sleep(600)
+        # 演示20秒后停止
+        await asyncio.sleep(60)
         client.stop()
 
         await client.join()
