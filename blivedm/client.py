@@ -9,6 +9,7 @@ from typing import *
 
 import aiohttp
 import brotli
+import yarl
 
 from . import handlers
 
@@ -18,6 +19,12 @@ __all__ = (
 
 logger = logging.getLogger('blivedm')
 
+USER_AGENT = (
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
+)
+
+UID_INIT_URL = 'https://api.bilibili.com/x/web-interface/nav'
+BUVID_INIT_URL = 'https://data.bilibili.com/v/'
 ROOM_INIT_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom'
 DANMAKU_SERVER_CONF_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo'
 DEFAULT_DANMAKU_SERVER_LIST = [
@@ -87,7 +94,7 @@ class BLiveClient:
     B站直播弹幕客户端，负责连接房间
 
     :param room_id: URL中的房间ID，可以用短ID
-    :param uid: B站用户ID，0表示未登录
+    :param uid: B站用户ID，0表示未登录，None表示自动获取
     :param session: cookie、连接池
     :param heartbeat_interval: 发送心跳包的间隔时间（秒）
     :param ssl: True表示用默认的SSLContext验证，False表示不验证，也可以传入SSLContext
@@ -96,7 +103,7 @@ class BLiveClient:
     def __init__(
         self,
         room_id,
-        uid=0,
+        uid=None,
         session: Optional[aiohttp.ClientSession] = None,
         heartbeat_interval=30,
         ssl: Union[bool, ssl_.SSLContext] = True,
@@ -169,6 +176,13 @@ class BLiveClient:
         主播用户ID，调用init_room后初始化
         """
         return self._room_owner_uid
+
+    @property
+    def uid(self) -> Optional[int]:
+        """
+        当前登录的用户ID，未登录则为0，调用init_room后初始化
+        """
+        return self._uid
 
     def add_handler(self, handler: 'handlers.HandlerInterface'):
         """
@@ -248,6 +262,15 @@ class BLiveClient:
 
         :return: True代表没有降级，如果需要降级后还可用，重载这个函数返回True
         """
+        if self._uid is None:
+            if not await self._init_uid():
+                logger.warning('room=%d _init_uid() failed', self._tmp_room_id)
+                self._uid = 0
+
+        if self._get_buvid() == '':
+            if not await self._init_buvid():
+                logger.warning('room=%d _init_buvid() failed', self._tmp_room_id)
+
         res = True
         if not await self._init_room_id_and_owner():
             res = False
@@ -262,14 +285,64 @@ class BLiveClient:
             self._host_server_token = None
         return res
 
+    async def _init_uid(self):
+        try:
+            async with self._session.get(
+                UID_INIT_URL,
+                headers={'User-Agent': USER_AGENT},
+                ssl=self._ssl
+            ) as res:
+                if res.status != 200:
+                    logger.warning('room=%d _init_uid() failed, status=%d, reason=%s', self._tmp_room_id,
+                                   res.status, res.reason)
+                    return False
+                data = await res.json()
+                if data['code'] != 0:
+                    if data['code'] == -101:
+                        # 未登录
+                        self._uid = 0
+                        return True
+                    logger.warning('room=%d _init_uid() failed, message=%s', self._tmp_room_id,
+                                   data['message'])
+                    return False
+
+                data = data['data']
+                if not data['isLogin']:
+                    # 未登录
+                    self._uid = 0
+                else:
+                    self._uid = data['mid']
+                return True
+        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
+            logger.exception('room=%d _init_uid() failed:', self._tmp_room_id)
+            return False
+
+    def _get_buvid(self):
+        cookies = self._session.cookie_jar.filter_cookies(yarl.URL(BUVID_INIT_URL))
+        buvid_cookie = cookies.get('buvid3', None)
+        if buvid_cookie is None:
+            return ''
+        return buvid_cookie.value
+
+    async def _init_buvid(self):
+        try:
+            async with self._session.get(
+                BUVID_INIT_URL,
+                headers={'User-Agent': USER_AGENT},
+                ssl=self._ssl
+            ) as res:
+                if res.status != 200:
+                    logger.warning('room=%d _init_buvid() status error, status=%d, reason=%s',
+                                   self._tmp_room_id, res.status, res.reason)
+        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
+            logger.exception('room=%d _init_buvid() exception:', self._tmp_room_id)
+        return self._get_buvid() != ''
+
     async def _init_room_id_and_owner(self):
         try:
             async with self._session.get(
                 ROOM_INIT_URL,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
-                                  ' Chrome/102.0.0.0 Safari/537.36'
-                },
+                headers={'User-Agent': USER_AGENT},
                 params={
                     'room_id': self._tmp_room_id
                 },
@@ -302,10 +375,7 @@ class BLiveClient:
         try:
             async with self._session.get(
                 DANMAKU_SERVER_CONF_URL,
-                headers={
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
-                                  ' Chrome/102.0.0.0 Safari/537.36'
-                },
+                headers={'User-Agent': USER_AGENT},
                 params={
                     'id': self._room_id,
                     'type': 0
@@ -385,10 +455,7 @@ class BLiveClient:
                 host_server = self._host_server_list[retry_count % len(self._host_server_list)]
                 async with self._session.ws_connect(
                     f"wss://{host_server['host']}:{host_server['wss_port']}/sub",
-                    headers={
-                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
-                                      ' Chrome/102.0.0.0 Safari/537.36'
-                    },
+                    headers={'User-Agent': USER_AGENT},
                     receive_timeout=self._heartbeat_interval + 5,
                     ssl=self._ssl
                 ) as websocket:
@@ -444,11 +511,12 @@ class BLiveClient:
         发送认证包
         """
         auth_params = {
-            'uid': self._uid or self.room_owner_uid or 0,
+            'uid': self._uid,
             'roomid': self._room_id,
             'protover': 3,
             'platform': 'web',
-            'type': 2
+            'type': 2,
+            'buvid': self._get_buvid(),
         }
         if self._host_server_token is not None:
             auth_params['key'] = self._host_server_token
