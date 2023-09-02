@@ -149,7 +149,7 @@ class OpenLiveClient:
             return False
 
         try:
-            params = f'{{"app_id":"{self.app_id}","game_id":{self._game_id}}}'
+            params = f'{{"app_id":{self.app_id},"game_id":{self._game_id}}}'
             headers = self._sign_request_header(params)
             async with self._session.post(
                 OPEN_LIVE_END_URL, headers=headers, data=params, ssl=self._ssl
@@ -175,7 +175,8 @@ class OpenLiveClient:
             return False
         
         try:
-            params = f'{{""game_id":{self._game_id}}}'
+            params = f'{{"game_id":{self._game_id}}}'
+            print(params)
             headers = self._sign_request_header(params)
             async with self._session.post(
                 OPEN_LIVE_HEARTBEAT_URL, headers=headers, data=params, ssl=self._ssl

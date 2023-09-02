@@ -19,14 +19,14 @@ async def main():
     await run_start()
 
 async def run_start():
-    client = blivedm.BLiveClient(open_live_app_id=APP_ID, open_live_access_key=ACCESS_KEY, open_live_access_secret=ACCESS_KEY_SECRET, open_live_code=TEST_AUTH_CODE, ssl=True)
+    client = blivedm.BLiveClient(use_open_live=True, open_live_app_id=APP_ID, open_live_access_key=ACCESS_KEY, open_live_access_secret=ACCESS_KEY_SECRET, open_live_code=TEST_AUTH_CODE, ssl=True)
     handler = OpenLiveHandlerInterface()
     client.add_handler(handler)
 
     client.start()
     try:
         # 演示60秒后停止
-        await asyncio.sleep(60)
+        await asyncio.sleep(600)
         client.stop()
 
         await client.join()

@@ -104,6 +104,7 @@ class BLiveClient:
         heartbeat_interval=30,
         ssl: Union[bool, ssl_.SSLContext] = True,
 
+        use_open_live: bool = False,
         open_live_app_id: Optional[int] = None,
         open_live_access_key: Optional[str] = None,
         open_live_access_secret: Optional[str] = None,
@@ -150,10 +151,11 @@ class BLiveClient:
         self._heartbeat_timer_handle: Optional[asyncio.TimerHandle] = None
         """发心跳包定时器的handle"""
 
+        self._open_live_client = None
         self._host_server_auth_body: Dict = None
         """开放平台的完整鉴权body"""
 
-        if open_live_app_id and open_live_access_key and open_live_access_secret and open_live_code:
+        if use_open_live:
             self._open_live_client = OpenLiveClient(open_live_app_id, open_live_access_key, open_live_access_secret, self._session, self._ssl)
             self._open_live_auth_code = open_live_code
 
