@@ -2,10 +2,10 @@
 import asyncio
 import blivedm
 
-TEST_AUTH_CODE = ''
-APP_ID = ''
-ACCESS_KEY = ''
-ACCESS_KEY_SECRET = ''
+TEST_AUTH_CODE = 'CWEPYMW57FNK6'
+APP_ID = '1651220148034'
+ACCESS_KEY = 'HrKeRsqT1wWQQRzsmz2Jksl8'
+ACCESS_KEY_SECRET = 'lGT9mC9KK7AiH1WRoVa0KBWpOHXOQx'
 
 class OpenLiveHandlerInterface:
     """

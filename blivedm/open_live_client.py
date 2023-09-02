@@ -42,14 +42,17 @@ class OpenLiveClient:
 
     @property
     def game_id(self) -> Optional[int]:
+        # 直播工具类项目不会返回game_id
         return self._game_id
     
     @property
     def ws_auth_body(self) -> Optional[Dict]:
+        # 完整的wss鉴权包
         return self._ws_auth_body
     
     @property
     def wss_link(self) -> Optional[List[str]]:
+        # wss服务列表
         return self._wss_link
     
     @property
@@ -132,6 +135,7 @@ class OpenLiveClient:
         self,
         data: dict
     ):
+        # 直播工具类项目不会返回game_id
         self._game_id = data['data']['game_info']['game_id']
         self._ws_auth_body = json.loads(data['data']['websocket_info']['auth_body'])
         self._wss_link = data['data']['websocket_info']['wss_link']
@@ -145,7 +149,8 @@ class OpenLiveClient:
         self
     ):
         if not self._game_id:
-            logger.warning('app=%d end failed, game_id not found', self.app_id)
+            # logger.warning('app=%d end failed, game_id not found', self._game_id)
+            # 直播工具类项目不会返回game_id所以这里先不作为异常场景处理
             return False
 
         try:
@@ -171,7 +176,8 @@ class OpenLiveClient:
         self
     ):
         if not self._game_id:
-            logger.warning('game=%d heartbeat failed, game_id not found', self._game_id)
+            # logger.warning('game=%d heartbeat failed, game_id not found', self._game_id)
+            # 直播工具类项目不会返回game_id所以这里先不作为异常场景处理
             return False
         
         try:
