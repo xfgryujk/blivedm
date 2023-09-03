@@ -6,7 +6,6 @@ import hmac
 import json
 import logging
 import random
-import ssl as ssl_
 from typing import *
 
 import aiohttp
@@ -37,7 +36,6 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
     :param session: cookie、连接池
     :param heartbeat_interval: 发送连接心跳包的间隔时间（秒）
     :param game_heartbeat_interval: 发送项目心跳包的间隔时间（秒）
-    :param ssl: True表示用默认的SSLContext验证，False表示不验证，也可以传入SSLContext
     """
 
     def __init__(
@@ -50,9 +48,8 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         session: Optional[aiohttp.ClientSession] = None,
         heartbeat_interval=30,
         game_heartbeat_interval=20,
-        ssl: Union[bool, ssl_.SSLContext] = True,
     ):
-        super().__init__(session, heartbeat_interval, ssl)
+        super().__init__(session, heartbeat_interval)
 
         self._access_key = access_key
         self._access_secret = access_secret
@@ -144,7 +141,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
 
         headers['Content-Type'] = 'application/json'
         headers['Accept'] = 'application/json'
-        return self._session.post(url, headers=headers, data=body_bytes, ssl=self._ssl)
+        return self._session.post(url, headers=headers, data=body_bytes)
 
     async def init_room(self):
         """
@@ -194,7 +191,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
 
     async def _end_game(self):
         """
-        关闭项目。互动玩法类项目建议断开连接时保证调用到这个函数（close会调用），否则短时间内无法重复连接同一个房间
+        关闭项目。互动玩法类项目建议断开连接时保证调用到这个函数（close会调用），否则可能短时间内无法重复连接同一个房间
         """
         if self._game_id in (None, ''):
             return True

@@ -45,10 +45,13 @@ class HandlerInterface:
     直播消息处理器接口
     """
 
-    async def handle(self, client: ws_base.WebSocketClientBase, command: dict):
+    def handle(self, client: ws_base.WebSocketClientBase, command: dict):
         raise NotImplementedError
 
-    # TODO 加个异常停止的回调
+    def on_stopped_by_exception(self, client: ws_base.WebSocketClientBase, exception: Exception):
+        """
+        当客户端被异常停止时调用。可以在这里close或者重新start
+        """
 
 
 def _make_msg_callback(method_name, message_cls):
@@ -72,7 +75,7 @@ class BaseHandler(HandlerInterface):
         str,
         Optional[Callable[
             ['BaseHandler', ws_base.WebSocketClientBase, dict],
-            Awaitable
+            Any
         ]]
     ] = {
         # 收到心跳包，这是blivedm自造的消息，原本的心跳包格式不一样
@@ -110,7 +113,7 @@ class BaseHandler(HandlerInterface):
     }
     """cmd -> 处理回调"""
 
-    async def handle(self, client: ws_base.WebSocketClientBase, command: dict):
+    def handle(self, client: ws_base.WebSocketClientBase, command: dict):
         cmd = command.get('cmd', '')
         pos = cmd.find(':')  # 2019-5-29 B站弹幕升级新增了参数
         if pos != -1:
@@ -125,34 +128,34 @@ class BaseHandler(HandlerInterface):
 
         callback = self._CMD_CALLBACK_DICT[cmd]
         if callback is not None:
-            await callback(self, client, command)
+            callback(self, client, command)
 
-    async def _on_heartbeat(self, client: ws_base.WebSocketClientBase, message: web_models.HeartbeatMessage):
+    def _on_heartbeat(self, client: ws_base.WebSocketClientBase, message: web_models.HeartbeatMessage):
         """
         收到心跳包
         """
 
-    async def _on_danmaku(self, client: ws_base.WebSocketClientBase, message: web_models.DanmakuMessage):
+    def _on_danmaku(self, client: ws_base.WebSocketClientBase, message: web_models.DanmakuMessage):
         """
         收到弹幕
         """
 
-    async def _on_gift(self, client: ws_base.WebSocketClientBase, message: web_models.GiftMessage):
+    def _on_gift(self, client: ws_base.WebSocketClientBase, message: web_models.GiftMessage):
         """
         收到礼物
         """
 
-    async def _on_buy_guard(self, client: ws_base.WebSocketClientBase, message: web_models.GuardBuyMessage):
+    def _on_buy_guard(self, client: ws_base.WebSocketClientBase, message: web_models.GuardBuyMessage):
         """
         有人上舰
         """
 
-    async def _on_super_chat(self, client: ws_base.WebSocketClientBase, message: web_models.SuperChatMessage):
+    def _on_super_chat(self, client: ws_base.WebSocketClientBase, message: web_models.SuperChatMessage):
         """
         醒目留言
         """
 
-    async def _on_super_chat_delete(
+    def _on_super_chat_delete(
         self, client: ws_base.WebSocketClientBase, message: web_models.SuperChatDeleteMessage
     ):
         """
@@ -163,36 +166,36 @@ class BaseHandler(HandlerInterface):
     # 开放平台消息
     #
 
-    async def _on_open_live_danmaku(self, client: ws_base.WebSocketClientBase, message: open_models.DanmakuMessage):
+    def _on_open_live_danmaku(self, client: ws_base.WebSocketClientBase, message: open_models.DanmakuMessage):
         """
         收到弹幕
         """
 
-    async def _on_open_live_gift(self, client: ws_base.WebSocketClientBase, message: open_models.GiftMessage):
+    def _on_open_live_gift(self, client: ws_base.WebSocketClientBase, message: open_models.GiftMessage):
         """
         收到礼物
         """
 
-    async def _on_open_live_buy_guard(self, client: ws_base.WebSocketClientBase, message: open_models.GuardBuyMessage):
+    def _on_open_live_buy_guard(self, client: ws_base.WebSocketClientBase, message: open_models.GuardBuyMessage):
         """
         有人上舰
         """
 
-    async def _on_open_live_super_chat(
+    def _on_open_live_super_chat(
         self, client: ws_base.WebSocketClientBase, message: open_models.SuperChatMessage
     ):
         """
         醒目留言
         """
 
-    async def _on_open_live_super_chat_delete(
+    def _on_open_live_super_chat_delete(
         self, client: ws_base.WebSocketClientBase, message: open_models.SuperChatDeleteMessage
     ):
         """
         删除醒目留言
         """
 
-    async def _on_open_live_like(self, client: ws_base.WebSocketClientBase, message: open_models.LikeMessage):
+    def _on_open_live_like(self, client: ws_base.WebSocketClientBase, message: open_models.LikeMessage):
         """
         点赞
         """

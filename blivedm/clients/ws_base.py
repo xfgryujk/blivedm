@@ -3,7 +3,6 @@ import asyncio
 import enum
 import json
 import logging
-import ssl as ssl_
 import struct
 import zlib
 from typing import *
@@ -83,14 +82,12 @@ class WebSocketClientBase:
 
     :param session: cookie、连接池
     :param heartbeat_interval: 发送心跳包的间隔时间（秒）
-    :param ssl: True表示用默认的SSLContext验证，False表示不验证，也可以传入SSLContext
     """
 
     def __init__(
         self,
         session: Optional[aiohttp.ClientSession] = None,
         heartbeat_interval: float = 30,
-        ssl: Union[bool, ssl_.SSLContext] = True,
     ):
         if session is None:
             self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
@@ -101,12 +98,9 @@ class WebSocketClientBase:
             assert self._session.loop is asyncio.get_event_loop()  # noqa
 
         self._heartbeat_interval = heartbeat_interval
-        # TODO 移除SSL配置
-        self._ssl = ssl if ssl else ssl_._create_unverified_context()  # noqa
 
-        # TODO 没必要支持多个handler，改成单个吧
-        self._handlers: List[handlers.HandlerInterface] = []
-        """消息处理器，可动态增删"""
+        self._handler: Optional[handlers.HandlerInterface] = None
+        """消息处理器"""
 
         # 在调用init_room后初始化的字段
         self._room_id: Optional[int] = None
@@ -133,27 +127,16 @@ class WebSocketClientBase:
         """
         return self._room_id
 
-    def add_handler(self, handler: 'handlers.HandlerInterface'):
+    def set_handler(self, handler: Optional['handlers.HandlerInterface']):
         """
-        添加消息处理器
-        注意多个处理器是并发处理的，不要依赖处理的顺序
-        消息处理器和接收消息运行在同一协程，如果处理消息耗时太长会阻塞接收消息，这种情况建议将消息推到队列，让另一个协程处理
+        设置消息处理器
+
+        注意消息处理器和网络协程运行在同一个协程，如果处理消息耗时太长会阻塞接收消息。如果是CPU密集型的任务，建议将消息推到线程池处理；
+        如果是IO密集型的任务，应该使用async函数，并且在handler里使用create_task创建新的协程
 
         :param handler: 消息处理器
         """
-        if handler not in self._handlers:
-            self._handlers.append(handler)
-
-    def remove_handler(self, handler: 'handlers.HandlerInterface'):
-        """
-        移除消息处理器
-
-        :param handler: 消息处理器
-        """
-        try:
-            self._handlers.remove(handler)
-        except ValueError:
-            pass
+        self._handler = handler
 
     def start(self):
         """
@@ -236,16 +219,21 @@ class WebSocketClientBase:
         """
         负责处理网络协程的异常，网络协程具体逻辑在_network_coroutine里
         """
+        exc = None
         try:
             await self._network_coroutine()
         except asyncio.CancelledError:
             # 正常停止
             pass
-        except Exception:  # noqa
+        except Exception as e:
             logger.exception('room=%s _network_coroutine() finished with exception:', self.room_id)
+            exc = e
         finally:
             logger.debug('room=%s _network_coroutine() finished', self.room_id)
             self._network_future = None
+
+        if exc is not None and self._handler is not None:
+            self._handler.on_stopped_by_exception(self, exc)
 
     async def _network_coroutine(self):
         """
@@ -261,7 +249,6 @@ class WebSocketClientBase:
                     self._get_ws_url(retry_count),
                     headers={'User-Agent': utils.USER_AGENT},  # web端的token也会签名UA
                     receive_timeout=self._heartbeat_interval + 5,
-                    ssl=self._ssl
                 ) as websocket:
                     self._websocket = websocket
                     await self._on_ws_connect()
@@ -281,9 +268,6 @@ class WebSocketClientBase:
                 logger.exception('room=%d auth failed, trying init_room() again', self.room_id)
                 if not await self.init_room():
                     raise InitError('init_room() failed')
-            except ssl_.SSLError:
-                logger.error('room=%d a SSLError happened, cannot reconnect', self.room_id)
-                raise
             finally:
                 self._websocket = None
                 await self._on_ws_close()
@@ -414,7 +398,7 @@ class WebSocketClientBase:
                     'popularity': popularity
                 }
             }
-            await self._handle_command(body)
+            self._handle_command(body)
 
         else:
             # 未知消息
@@ -441,7 +425,7 @@ class WebSocketClientBase:
                 if len(body) != 0:
                     try:
                         body = json.loads(body.decode('utf-8'))
-                        await self._handle_command(body)
+                        self._handle_command(body)
                     except asyncio.CancelledError:
                         raise
                     except Exception:
@@ -464,19 +448,17 @@ class WebSocketClientBase:
             logger.warning('room=%d unknown message operation=%d, header=%s, body=%s', self.room_id,
                            header.operation, header, body)
 
-    async def _handle_command(self, command: dict):
+    def _handle_command(self, command: dict):
         """
-        解析并处理业务消息
+        处理业务消息
 
         :param command: 业务消息
         """
-        # TODO 考虑解析完整个WS包后再一次处理所有消息。另外用call_soon就不会阻塞网络协程了，也不用加shield
-        # 外部代码可能不能正常处理取消，所以这里加shield
-        results = await asyncio.shield(
-            asyncio.gather(
-                *(handler.handle(self, command) for handler in self._handlers), return_exceptions=True
-            )
-        )
-        for res in results:
-            if isinstance(res, Exception):
-                logger.exception('room=%d _handle_command() failed, command=%s', self.room_id, command, exc_info=res)
+        try:
+            # 为什么不做成异步的：
+            # 1. 为了保持处理消息的顺序，这里不使用call_soon、create_task等方法延迟处理
+            # 2. 如果支持handle使用async函数，用户可能会在里面处理耗时很长的异步操作，导致网络协程阻塞
+            # 这里做成同步的，强制用户使用create_task或消息队列处理异步操作，这样就不会阻塞网络协程
+            self._handler.handle(self, command)
+        except Exception as e:
+            logger.exception('room=%d _handle_command() failed, command=%s', self.room_id, command, exc_info=e)

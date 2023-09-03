@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
-import ssl as ssl_
 from typing import *
 
 import aiohttp
@@ -33,7 +32,6 @@ class BLiveClient(ws_base.WebSocketClientBase):
     :param uid: B站用户ID，0表示未登录，None表示自动获取
     :param session: cookie、连接池
     :param heartbeat_interval: 发送心跳包的间隔时间（秒）
-    :param ssl: True表示用默认的SSLContext验证，False表示不验证，也可以传入SSLContext
     """
 
     def __init__(
@@ -43,18 +41,14 @@ class BLiveClient(ws_base.WebSocketClientBase):
         uid: Optional[int] = None,
         session: Optional[aiohttp.ClientSession] = None,
         heartbeat_interval=30,
-        ssl: Union[bool, ssl_.SSLContext] = True,
     ):
-        super().__init__(session, heartbeat_interval, ssl)
+        super().__init__(session, heartbeat_interval)
 
         self._tmp_room_id = room_id
         """用来init_room的临时房间ID，可以用短ID"""
         self._uid = uid
 
         # 在调用init_room后初始化的字段
-        # TODO 移除短ID
-        self._room_short_id: Optional[int] = None
-        """房间短ID，没有则为0"""
         self._room_owner_uid: Optional[int] = None
         """主播用户ID"""
         self._host_server_list: Optional[List[dict]] = None
@@ -67,11 +61,11 @@ class BLiveClient(ws_base.WebSocketClientBase):
         """连接弹幕服务器用的token"""
 
     @property
-    def room_short_id(self) -> Optional[int]:
+    def tmp_room_id(self) -> int:
         """
-        房间短ID，没有则为0，调用init_room后初始化
+        构造时传进来的room_id参数
         """
-        return self._room_short_id
+        return self._tmp_room_id
 
     @property
     def room_owner_uid(self) -> Optional[int]:
@@ -106,7 +100,7 @@ class BLiveClient(ws_base.WebSocketClientBase):
         if not await self._init_room_id_and_owner():
             res = False
             # 失败了则降级
-            self._room_id = self._room_short_id = self._tmp_room_id
+            self._room_id = self._tmp_room_id
             self._room_owner_uid = 0
 
         if not await self._init_host_server():
@@ -128,7 +122,6 @@ class BLiveClient(ws_base.WebSocketClientBase):
             async with self._session.get(
                 UID_INIT_URL,
                 headers={'User-Agent': utils.USER_AGENT},
-                ssl=self._ssl
             ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _init_uid() failed, status=%d, reason=%s', self._tmp_room_id,
@@ -167,7 +160,6 @@ class BLiveClient(ws_base.WebSocketClientBase):
             async with self._session.get(
                 BUVID_INIT_URL,
                 headers={'User-Agent': utils.USER_AGENT},
-                ssl=self._ssl
             ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _init_buvid() status error, status=%d, reason=%s',
@@ -184,7 +176,6 @@ class BLiveClient(ws_base.WebSocketClientBase):
                 params={
                     'room_id': self._tmp_room_id
                 },
-                ssl=self._ssl
             ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _init_room_id_and_owner() failed, status=%d, reason=%s', self._tmp_room_id,
@@ -205,7 +196,6 @@ class BLiveClient(ws_base.WebSocketClientBase):
     def _parse_room_init(self, data):
         room_info = data['room_info']
         self._room_id = room_info['room_id']
-        self._room_short_id = room_info['short_id']
         self._room_owner_uid = room_info['uid']
         return True
 
@@ -218,7 +208,6 @@ class BLiveClient(ws_base.WebSocketClientBase):
                     'id': self._room_id,
                     'type': 0
                 },
-                ssl=self._ssl
             ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', self._room_id,
