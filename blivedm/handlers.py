@@ -51,6 +51,8 @@ class HandlerInterface:
     async def handle(self, client: client_.BLiveClient, command: dict):
         raise NotImplementedError
 
+    # TODO 加个异常停止的回调
+
 
 class BaseHandler(HandlerInterface):
     """

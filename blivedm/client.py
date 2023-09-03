@@ -5,15 +5,13 @@ import json
 import logging
 import ssl as ssl_
 import struct
+import zlib
 from typing import *
 
 import aiohttp
 import brotli
 
-from . import open_live_client
 from . import handlers
-
-OpenLiveClient = open_live_client.OpenLiveClient
 
 __all__ = (
     'BLiveClient',
@@ -98,17 +96,11 @@ class BLiveClient:
 
     def __init__(
         self,
-        room_id=0,
+        room_id,
         uid=0,
         session: Optional[aiohttp.ClientSession] = None,
         heartbeat_interval=30,
         ssl: Union[bool, ssl_.SSLContext] = True,
-
-        use_open_live: bool = False,
-        open_live_app_id: Optional[int] = None,
-        open_live_access_key: Optional[str] = None,
-        open_live_access_secret: Optional[str] = None,
-        open_live_code: Optional[str] = None,
     ):
         self._tmp_room_id = room_id
         """用来init_room的临时房间ID，可以用短ID"""
@@ -125,6 +117,7 @@ class BLiveClient:
         self._heartbeat_interval = heartbeat_interval
         self._ssl = ssl if ssl else ssl_._create_unverified_context()  # noqa
 
+        # TODO 没必要支持多个handler，改成单个吧
         self._handlers: List[handlers.HandlerInterface] = []
         """消息处理器，可动态增删"""
 
@@ -150,14 +143,6 @@ class BLiveClient:
         """网络协程的future"""
         self._heartbeat_timer_handle: Optional[asyncio.TimerHandle] = None
         """发心跳包定时器的handle"""
-
-        self._open_live_client = None
-        self._host_server_auth_body: Dict = None
-        """开放平台的完整鉴权body"""
-
-        if use_open_live:
-            self._open_live_client = OpenLiveClient(open_live_app_id, open_live_access_key, open_live_access_secret, self._session, self._ssl)
-            self._open_live_auth_code = open_live_code
 
     @property
     def is_running(self) -> bool:
@@ -233,10 +218,6 @@ class BLiveClient:
         """
         便利函数，停止本客户端并释放本客户端的资源，调用后本客户端将不可用
         """
-
-        if self._open_live_client:
-            await self._open_live_client.end()
-
         if self.is_running:
             self.stop()
             await self.join()
@@ -270,9 +251,6 @@ class BLiveClient:
         :return: True代表没有降级，如果需要降级后还可用，重载这个函数返回True
         """
         res = True
-        if self._open_live_client and await self._init_room_by_open_live():
-            return res
-            
         if not await self._init_room_id_and_owner():
             res = False
             # 失败了则降级
@@ -285,22 +263,6 @@ class BLiveClient:
             self._host_server_list = DEFAULT_DANMAKU_SERVER_LIST
             self._host_server_token = None
         return res
-    
-    async def _init_room_by_open_live(self):
-        """
-        通过开放平台初始化房间
-        """
-        if not self._open_live_client:
-            logger.warning('_init_room_by_open_live() failed, open_live_client is None')
-            return False
-        if not await self._open_live_client.start(self._open_live_auth_code):
-            logger.warning('app=%d _init_room_by_open_live() failed, open_live_client.start() failed', self._open_live_client.app_id)
-            return False
-        self._room_id = self._open_live_client.anchor_room_id
-        self._room_owner_uid = self._open_live_client.anchor_uid
-        self._host_server_auth_body = self._open_live_client.ws_auth_body
-        self._host_server_list = self._open_live_client.wss_link
-        return True
 
     async def _init_room_id_and_owner(self):
         try:
@@ -414,7 +376,7 @@ class BLiveClient:
         网络协程，负责连接服务器、接收消息、解包
         """
         # 如果之前未初始化则初始化
-        if self._host_server_auth_body is None and self._host_server_token is None:
+        if self._host_server_token is None:
             if not await self.init_room():
                 raise InitError('init_room() failed')
 
@@ -424,7 +386,6 @@ class BLiveClient:
                 # 连接
                 host_server = self._host_server_list[retry_count % len(self._host_server_list)]
                 async with self._session.ws_connect(
-                    host_server if isinstance(host_server, str) else
                     f"wss://{host_server['host']}:{host_server['wss_port']}/sub",
                     headers={
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)'
@@ -493,10 +454,6 @@ class BLiveClient:
         }
         if self._host_server_token is not None:
             auth_params['key'] = self._host_server_token
-
-        # 开放平台连接则直接替换认证包
-        if self._host_server_auth_body is not None:
-            auth_params = self._host_server_auth_body
         await self._websocket.send_bytes(self._make_packet(auth_params, Operation.AUTH))
 
     def _on_send_heartbeat(self):
@@ -521,13 +478,6 @@ class BLiveClient:
 
         try:
             await self._websocket.send_bytes(self._make_packet({}, Operation.HEARTBEAT))
-        except (ConnectionResetError, aiohttp.ClientConnectionError) as e:
-            logger.warning('room=%d _send_heartbeat() failed: %r', self.room_id, e)
-        except Exception:  # noqa
-            logger.exception('room=%d _send_heartbeat() failed:', self.room_id)
-
-        try:
-            await self._open_live_client.heartbeat()
         except (ConnectionResetError, aiohttp.ClientConnectionError) as e:
             logger.warning('room=%d _send_heartbeat() failed: %r', self.room_id, e)
         except Exception:  # noqa
@@ -611,6 +561,10 @@ class BLiveClient:
                 # 压缩过的先解压，为了避免阻塞网络线程，放在其他线程执行
                 body = await asyncio.get_running_loop().run_in_executor(None, brotli.decompress, body)
                 await self._parse_ws_message(body)
+            elif header.ver == ProtoVer.DEFLATE:
+                # web端已经不用zlib压缩了，但是开放平台会用
+                body = await asyncio.get_running_loop().run_in_executor(None, zlib.decompress, body)
+                await self._parse_ws_message(body)
             elif header.ver == ProtoVer.NORMAL:
                 # 没压缩过的直接反序列化，因为有万恶的GIL，这里不能并行避免阻塞
                 if len(body) != 0:
@@ -645,6 +599,7 @@ class BLiveClient:
 
         :param command: 业务消息
         """
+        # TODO 考虑解析完整个WS包后再一次处理所有消息。另外用call_soon就不会阻塞网络协程了，也不用加shield
         # 外部代码可能不能正常处理取消，所以这里加shield
         results = await asyncio.shield(
             asyncio.gather(

@@ -1,37 +1,47 @@
 # -*- coding: utf-8 -*-
 import asyncio
+
 import blivedm
+import blivedm.open_live_client as open_live_client
 
-TEST_AUTH_CODE = ''
-APP_ID = ''
 ACCESS_KEY = ''
-ACCESS_KEY_SECRET = ''
+ACCESS_SECRET = ''
+APP_ID = 0
+ROOM_OWNER_AUTH_CODE = ''
 
-class OpenLiveHandlerInterface:
-    """
-    开放平台直播消息处理器接口
-    """
-
-    async def handle(self, client: blivedm.BLiveClient, command: dict):
-        print(f'{command}')
 
 async def main():
-    await run_start()
+    await run_single_client()
 
-async def run_start():
-    client = blivedm.BLiveClient(use_open_live=True, open_live_app_id=APP_ID, open_live_access_key=ACCESS_KEY, open_live_access_secret=ACCESS_KEY_SECRET, open_live_code=TEST_AUTH_CODE, ssl=True)
-    handler = OpenLiveHandlerInterface()
+
+async def run_single_client():
+    """
+    演示监听一个直播间
+    """
+    client = open_live_client.OpenLiveClient(
+        access_key=ACCESS_KEY,
+        access_secret=ACCESS_SECRET,
+        app_id=APP_ID,
+        room_owner_auth_code=ROOM_OWNER_AUTH_CODE,
+    )
+    handler = MyHandler()
     client.add_handler(handler)
 
     client.start()
     try:
-        # 演示20秒后停止
-        await asyncio.sleep(60)
+        # 演示70秒后停止
+        await asyncio.sleep(70)
         client.stop()
 
         await client.join()
     finally:
         await client.stop_and_close()
+
+
+class MyHandler(blivedm.HandlerInterface):
+    async def handle(self, client: open_live_client.OpenLiveClient, command: dict):
+        print(command)
+
 
 if __name__ == '__main__':
     asyncio.run(main())
