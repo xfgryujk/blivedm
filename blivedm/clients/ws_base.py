@@ -10,27 +10,14 @@ from typing import *
 
 import aiohttp
 import brotli
-import yarl
 
-from . import handlers
-
-__all__ = (
-    'BLiveClient',
-)
+from .. import handlers
 
 logger = logging.getLogger('blivedm')
 
 USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
 )
-
-UID_INIT_URL = 'https://api.bilibili.com/x/web-interface/nav'
-BUVID_INIT_URL = 'https://data.bilibili.com/v/'
-ROOM_INIT_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom'
-DANMAKU_SERVER_CONF_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo'
-DEFAULT_DANMAKU_SERVER_LIST = [
-    {'host': 'broadcastlv.chat.bilibili.com', 'port': 2243, 'wss_port': 443, 'ws_port': 2244}
-]
 
 HEADER_STRUCT = struct.Struct('>I2H2I')
 
@@ -90,12 +77,10 @@ class AuthError(Exception):
     """认证失败"""
 
 
-class BLiveClient:
+class WebSocketClientBase:
     """
-    B站直播弹幕客户端，负责连接房间
+    基于WebSocket的客户端
 
-    :param room_id: URL中的房间ID，可以用短ID
-    :param uid: B站用户ID，0表示未登录，None表示自动获取
     :param session: cookie、连接池
     :param heartbeat_interval: 发送心跳包的间隔时间（秒）
     :param ssl: True表示用默认的SSLContext验证，False表示不验证，也可以传入SSLContext
@@ -103,16 +88,10 @@ class BLiveClient:
 
     def __init__(
         self,
-        room_id,
-        uid=None,
         session: Optional[aiohttp.ClientSession] = None,
-        heartbeat_interval=30,
+        heartbeat_interval: float = 30,
         ssl: Union[bool, ssl_.SSLContext] = True,
     ):
-        self._tmp_room_id = room_id
-        """用来init_room的临时房间ID，可以用短ID"""
-        self._uid = uid
-
         if session is None:
             self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
             self._own_session = True
@@ -122,6 +101,7 @@ class BLiveClient:
             assert self._session.loop is asyncio.get_event_loop()  # noqa
 
         self._heartbeat_interval = heartbeat_interval
+        # TODO 移除SSL配置
         self._ssl = ssl if ssl else ssl_._create_unverified_context()  # noqa
 
         # TODO 没必要支持多个handler，改成单个吧
@@ -129,19 +109,7 @@ class BLiveClient:
         """消息处理器，可动态增删"""
 
         # 在调用init_room后初始化的字段
-        self._room_id = None
-        """真实房间ID"""
-        self._room_short_id = None
-        """房间短ID，没有则为0"""
-        self._room_owner_uid = None
-        """主播用户ID"""
-        self._host_server_list: Optional[List[dict]] = None
-        """
-        弹幕服务器列表
-        [{host: "tx-bj4-live-comet-04.chat.bilibili.com", port: 2243, wss_port: 443, ws_port: 2244}, ...]
-        """
-        self._host_server_token = None
-        """连接弹幕服务器用的token"""
+        self._room_id: Optional[int] = None
 
         # 在运行时初始化的字段
         self._websocket: Optional[aiohttp.ClientWebSocketResponse] = None
@@ -164,27 +132,6 @@ class BLiveClient:
         房间ID，调用init_room后初始化
         """
         return self._room_id
-
-    @property
-    def room_short_id(self) -> Optional[int]:
-        """
-        房间短ID，没有则为0，调用init_room后初始化
-        """
-        return self._room_short_id
-
-    @property
-    def room_owner_uid(self) -> Optional[int]:
-        """
-        主播用户ID，调用init_room后初始化
-        """
-        return self._room_owner_uid
-
-    @property
-    def uid(self) -> Optional[int]:
-        """
-        当前登录的用户ID，未登录则为0，调用init_room后初始化
-        """
-        return self._uid
 
     def add_handler(self, handler: 'handlers.HandlerInterface'):
         """
@@ -258,154 +205,13 @@ class BLiveClient:
         if self._own_session:
             await self._session.close()
 
-    async def init_room(self):
+    async def init_room(self) -> bool:
         """
         初始化连接房间需要的字段
 
         :return: True代表没有降级，如果需要降级后还可用，重载这个函数返回True
         """
-        if self._uid is None:
-            if not await self._init_uid():
-                logger.warning('room=%d _init_uid() failed', self._tmp_room_id)
-                self._uid = 0
-
-        if self._get_buvid() == '':
-            if not await self._init_buvid():
-                logger.warning('room=%d _init_buvid() failed', self._tmp_room_id)
-
-        res = True
-        if not await self._init_room_id_and_owner():
-            res = False
-            # 失败了则降级
-            self._room_id = self._room_short_id = self._tmp_room_id
-            self._room_owner_uid = 0
-
-        if not await self._init_host_server():
-            res = False
-            # 失败了则降级
-            self._host_server_list = DEFAULT_DANMAKU_SERVER_LIST
-            self._host_server_token = None
-        return res
-
-    async def _init_uid(self):
-        try:
-            async with self._session.get(
-                UID_INIT_URL,
-                headers={'User-Agent': USER_AGENT},
-                ssl=self._ssl
-            ) as res:
-                if res.status != 200:
-                    logger.warning('room=%d _init_uid() failed, status=%d, reason=%s', self._tmp_room_id,
-                                   res.status, res.reason)
-                    return False
-                data = await res.json()
-                if data['code'] != 0:
-                    if data['code'] == -101:
-                        # 未登录
-                        self._uid = 0
-                        return True
-                    logger.warning('room=%d _init_uid() failed, message=%s', self._tmp_room_id,
-                                   data['message'])
-                    return False
-
-                data = data['data']
-                if not data['isLogin']:
-                    # 未登录
-                    self._uid = 0
-                else:
-                    self._uid = data['mid']
-                return True
-        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-            logger.exception('room=%d _init_uid() failed:', self._tmp_room_id)
-            return False
-
-    def _get_buvid(self):
-        cookies = self._session.cookie_jar.filter_cookies(yarl.URL(BUVID_INIT_URL))
-        buvid_cookie = cookies.get('buvid3', None)
-        if buvid_cookie is None:
-            return ''
-        return buvid_cookie.value
-
-    async def _init_buvid(self):
-        try:
-            async with self._session.get(
-                BUVID_INIT_URL,
-                headers={'User-Agent': USER_AGENT},
-                ssl=self._ssl
-            ) as res:
-                if res.status != 200:
-                    logger.warning('room=%d _init_buvid() status error, status=%d, reason=%s',
-                                   self._tmp_room_id, res.status, res.reason)
-        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-            logger.exception('room=%d _init_buvid() exception:', self._tmp_room_id)
-        return self._get_buvid() != ''
-
-    async def _init_room_id_and_owner(self):
-        try:
-            async with self._session.get(
-                ROOM_INIT_URL,
-                headers={'User-Agent': USER_AGENT},
-                params={
-                    'room_id': self._tmp_room_id
-                },
-                ssl=self._ssl
-            ) as res:
-                if res.status != 200:
-                    logger.warning('room=%d _init_room_id_and_owner() failed, status=%d, reason=%s', self._tmp_room_id,
-                                   res.status, res.reason)
-                    return False
-                data = await res.json()
-                if data['code'] != 0:
-                    logger.warning('room=%d _init_room_id_and_owner() failed, message=%s', self._tmp_room_id,
-                                   data['message'])
-                    return False
-                if not self._parse_room_init(data['data']):
-                    return False
-        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-            logger.exception('room=%d _init_room_id_and_owner() failed:', self._tmp_room_id)
-            return False
-        return True
-
-    def _parse_room_init(self, data):
-        room_info = data['room_info']
-        self._room_id = room_info['room_id']
-        self._room_short_id = room_info['short_id']
-        self._room_owner_uid = room_info['uid']
-        return True
-
-    async def _init_host_server(self):
-        try:
-            async with self._session.get(
-                DANMAKU_SERVER_CONF_URL,
-                headers={'User-Agent': USER_AGENT},
-                params={
-                    'id': self._room_id,
-                    'type': 0
-                },
-                ssl=self._ssl
-            ) as res:
-                if res.status != 200:
-                    logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', self._room_id,
-                                   res.status, res.reason)
-                    return False
-                data = await res.json()
-                if data['code'] != 0:
-                    logger.warning('room=%d _init_host_server() failed, message=%s', self._room_id, data['message'])
-                    return False
-                if not self._parse_danmaku_server_conf(data['data']):
-                    return False
-        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-            logger.exception('room=%d _init_host_server() failed:', self._room_id)
-            return False
-        return True
-
-    def _parse_danmaku_server_conf(self, data):
-        self._host_server_list = data['host_list']
-        self._host_server_token = data['token']
-        if not self._host_server_list:
-            logger.warning('room=%d _parse_danmaku_server_conf() failed: host_server_list is empty', self._room_id)
-            return False
-        return True
+        raise NotImplementedError
 
     @staticmethod
     def _make_packet(data: dict, operation: int) -> bytes:
@@ -445,19 +251,14 @@ class BLiveClient:
         """
         网络协程，负责连接服务器、接收消息、解包
         """
-        # 如果之前未初始化则初始化
-        if self._host_server_token is None:
-            if not await self.init_room():
-                raise InitError('init_room() failed')
+        await self._on_network_coroutine_start()
 
         retry_count = 0
         while True:
             try:
                 # 连接
-                host_server = self._host_server_list[retry_count % len(self._host_server_list)]
                 async with self._session.ws_connect(
-                    f"wss://{host_server['host']}:{host_server['wss_port']}/sub",
-                    headers={'User-Agent': USER_AGENT},
+                    self._get_ws_url(retry_count),
                     receive_timeout=self._heartbeat_interval + 5,
                     ssl=self._ssl
                 ) as websocket:
@@ -491,6 +292,17 @@ class BLiveClient:
             logger.warning('room=%d is reconnecting, retry_count=%d', self.room_id, retry_count)
             await asyncio.sleep(1)
 
+    async def _on_network_coroutine_start(self):
+        """
+        在_network_coroutine开头运行，可以用来初始化房间
+        """
+
+    def _get_ws_url(self, retry_count) -> str:
+        """
+        返回WebSocket连接的URL，可以在这里做故障转移和负载均衡
+        """
+        raise NotImplementedError
+
     async def _on_ws_connect(self):
         """
         WebSocket连接成功
@@ -512,17 +324,7 @@ class BLiveClient:
         """
         发送认证包
         """
-        auth_params = {
-            'uid': self._uid,
-            'roomid': self._room_id,
-            'protover': 3,
-            'platform': 'web',
-            'type': 2,
-            'buvid': self._get_buvid(),
-        }
-        if self._host_server_token is not None:
-            auth_params['key'] = self._host_server_token
-        await self._websocket.send_bytes(self._make_packet(auth_params, Operation.AUTH))
+        raise NotImplementedError
 
     def _on_send_heartbeat(self):
         """

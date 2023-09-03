@@ -2,7 +2,6 @@
 import asyncio
 
 import blivedm
-import blivedm.open_live_client as open_live_client
 
 ACCESS_KEY = ''
 ACCESS_SECRET = ''
@@ -18,7 +17,7 @@ async def run_single_client():
     """
     演示监听一个直播间
     """
-    client = open_live_client.OpenLiveClient(
+    client = blivedm.OpenLiveClient(
         access_key=ACCESS_KEY,
         access_secret=ACCESS_SECRET,
         app_id=APP_ID,
@@ -39,7 +38,7 @@ async def run_single_client():
 
 
 class MyHandler(blivedm.HandlerInterface):
-    async def handle(self, client: open_live_client.OpenLiveClient, command: dict):
+    async def handle(self, client: blivedm.OpenLiveClient, command: dict):
         print(command)
 
 

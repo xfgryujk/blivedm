@@ -1,17 +1,21 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import datetime
 import hashlib
 import hmac
 import json
 import logging
 import random
 import ssl as ssl_
-import datetime
 from typing import *
 
 import aiohttp
 
-from . import client, handlers
+from . import ws_base
+
+__all__ = (
+    'OpenLiveClient',
+)
 
 logger = logging.getLogger('blivedm')
 
@@ -20,10 +24,9 @@ HEARTBEAT_URL = 'https://live-open.biliapi.com/v2/app/heartbeat'
 END_URL = 'https://live-open.biliapi.com/v2/app/end'
 
 
-# TODO 抽出公共基类，现在BLiveClient和OpenLiveClient还有不重合的代码
-class OpenLiveClient(client.BLiveClient):
+class OpenLiveClient(ws_base.WebSocketClientBase):
     """
-    B站直播开放平台客户端，负责连接房间
+    开放平台客户端
 
     文档参考：https://open-live.bilibili.com/document/
 
@@ -43,41 +46,28 @@ class OpenLiveClient(client.BLiveClient):
         access_secret: str,
         app_id: int,
         room_owner_auth_code: str,
+        *,
         session: Optional[aiohttp.ClientSession] = None,
         heartbeat_interval=30,
         game_heartbeat_interval=20,
         ssl: Union[bool, ssl_.SSLContext] = True,
     ):
+        super().__init__(session, heartbeat_interval, ssl)
+
         self._access_key = access_key
         self._access_secret = access_secret
         self._app_id = app_id
         self._room_owner_auth_code = room_owner_auth_code
-
-        if session is None:
-            self._session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10))
-            self._own_session = True
-        else:
-            self._session = session
-            self._own_session = False
-            assert self._session.loop is asyncio.get_event_loop()  # noqa
-
-        self._heartbeat_interval = heartbeat_interval
         self._game_heartbeat_interval = game_heartbeat_interval
-        self._ssl = ssl if ssl else ssl_._create_unverified_context()  # noqa
-
-        self._handlers: List[handlers.HandlerInterface] = []
-        """消息处理器，可动态增删"""
 
         # 在调用init_room后初始化的字段
-        self._room_id = None
-        """真实房间ID"""
-        self._room_owner_uid = None
+        self._room_owner_uid: Optional[int] = None
         """主播用户ID"""
-        self._host_server_list: Optional[List[str]] = []
+        self._host_server_url_list: Optional[List[str]] = []
         """弹幕服务器URL列表"""
-        self._auth_body = None
+        self._auth_body: Optional[str] = None
         """连接弹幕服务器用的认证包内容"""
-        self._game_id = None
+        self._game_id: Optional[str] = None
         """项目场次ID，仅用于互动玩法类项目，其他项目为空字符串"""
 
         # 在运行时初始化的字段
@@ -89,13 +79,6 @@ class OpenLiveClient(client.BLiveClient):
         """发连接心跳包定时器的handle"""
         self._game_heartbeat_timer_handle: Optional[asyncio.TimerHandle] = None
         """发项目心跳包定时器的handle"""
-
-    @property
-    def room_id(self) -> Optional[int]:
-        """
-        房间ID，调用init_room后初始化
-        """
-        return self._room_id
 
     @property
     def room_owner_uid(self) -> Optional[int]:
@@ -203,7 +186,7 @@ class OpenLiveClient(client.BLiveClient):
         self._game_id = data['game_info']['game_id']
         websocket_info = data['websocket_info']
         self._auth_body = websocket_info['auth_body']
-        self._host_server_list = websocket_info['wss_link']
+        self._host_server_url_list = websocket_info['wss_link']
         anchor_info = data['anchor_info']
         self._room_id = anchor_info['room_id']
         self._room_owner_uid = anchor_info['uid']
@@ -275,58 +258,24 @@ class OpenLiveClient(client.BLiveClient):
             return False
         return True
 
-    async def _network_coroutine(self):
+    async def _on_network_coroutine_start(self):
         """
-        网络协程，负责连接服务器、接收消息、解包
+        在_network_coroutine开头运行，可以用来初始化房间
         """
         # 如果之前未初始化则初始化
         if self._auth_body is None:
             if not await self.init_room():
-                raise client.InitError('init_room() failed')
+                raise ws_base.InitError('init_room() failed')
 
-        retry_count = 0
-        while True:
-            try:
-                # 连接
-                host_server_url = self._host_server_list[retry_count % len(self._host_server_list)]
-                async with self._session.ws_connect(
-                    host_server_url,
-                    receive_timeout=self._heartbeat_interval + 5,
-                    ssl=self._ssl
-                ) as websocket:
-                    self._websocket = websocket
-                    await self._on_ws_connect()
-
-                    # 处理消息
-                    message: aiohttp.WSMessage
-                    async for message in websocket:
-                        await self._on_ws_message(message)
-                        # 至少成功处理1条消息
-                        retry_count = 0
-
-            except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-                # 掉线重连
-                pass
-            except client.AuthError:
-                # 认证失败了，应该重新获取auth_body再重连
-                logger.exception('room=%d auth failed, trying init_room() again', self.room_id)
-                if not await self.init_room():
-                    raise client.InitError('init_room() failed')
-            except ssl_.SSLError:
-                logger.error('room=%d a SSLError happened, cannot reconnect', self.room_id)
-                raise
-            finally:
-                self._websocket = None
-                await self._on_ws_close()
-
-            # 准备重连
-            retry_count += 1
-            logger.warning('room=%d is reconnecting, retry_count=%d', self.room_id, retry_count)
-            await asyncio.sleep(1)
+    def _get_ws_url(self, retry_count) -> str:
+        """
+        返回WebSocket连接的URL，可以在这里做故障转移和负载均衡
+        """
+        return self._host_server_url_list[retry_count % len(self._host_server_url_list)]
 
     async def _send_auth(self):
         """
         发送认证包
         """
         auth_body = json.loads(self._auth_body)
-        await self._websocket.send_bytes(self._make_packet(auth_body, client.Operation.AUTH))
+        await self._websocket.send_bytes(self._make_packet(auth_body, ws_base.Operation.AUTH))
