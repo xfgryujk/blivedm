@@ -3,7 +3,7 @@ import logging
 from typing import *
 
 from .clients import ws_base
-from . import models
+from .models import web as web_models, open_live as open_models
 
 __all__ = (
     'HandlerInterface',
@@ -12,7 +12,7 @@ __all__ = (
 
 logger = logging.getLogger('blivedm')
 
-IGNORED_CMDS = (
+logged_unknown_cmds = {
     'COMBO_SEND',
     'ENTRY_EFFECT',
     'HOT_RANK_CHANGED',
@@ -36,10 +36,7 @@ IGNORED_CMDS = (
     'STOP_LIVE_ROOM_LIST',
     'SUPER_CHAT_MESSAGE_JPN',
     'WIDGET_BANNER',
-)
-"""常见可忽略的cmd"""
-
-logged_unknown_cmds = set()
+}
 """已打日志的未知cmd"""
 
 
@@ -54,28 +51,22 @@ class HandlerInterface:
     # TODO 加个异常停止的回调
 
 
+def _make_msg_callback(method_name, message_cls):
+    def callback(self: 'BaseHandler', client: ws_base.WebSocketClientBase, command: dict):
+        method = getattr(self, method_name)
+        return method(client, message_cls.from_command(command['data']))
+    return callback
+
+
 class BaseHandler(HandlerInterface):
     """
     一个简单的消息处理器实现，带消息分发和消息类型转换。继承并重写_on_xxx方法即可实现自己的处理器
     """
 
-    def __heartbeat_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_heartbeat(client, models.HeartbeatMessage.from_command(command['data']))
-
     def __danmu_msg_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_danmaku(client, models.DanmakuMessage.from_command(command['info'], command.get('dm_v2', '')))
-
-    def __send_gift_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_gift(client, models.GiftMessage.from_command(command['data']))
-
-    def __guard_buy_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_buy_guard(client, models.GuardBuyMessage.from_command(command['data']))
-
-    def __super_chat_message_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_super_chat(client, models.SuperChatMessage.from_command(command['data']))
-
-    def __super_chat_message_delete_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_super_chat_delete(client, models.SuperChatDeleteMessage.from_command(command['data']))
+        return self._on_danmaku(
+            client, web_models.DanmakuMessage.from_command(command['info'], command.get('dm_v2', ''))
+        )
 
     _CMD_CALLBACK_DICT: Dict[
         str,
@@ -85,24 +76,39 @@ class BaseHandler(HandlerInterface):
         ]]
     ] = {
         # 收到心跳包，这是blivedm自造的消息，原本的心跳包格式不一样
-        '_HEARTBEAT': __heartbeat_callback,
+        '_HEARTBEAT': _make_msg_callback('_on_heartbeat', web_models.HeartbeatMessage),
         # 收到弹幕
         # go-common\app\service\live\live-dm\service\v1\send.go
         'DANMU_MSG': __danmu_msg_callback,
         # 有人送礼
-        'SEND_GIFT': __send_gift_callback,
+        'SEND_GIFT': _make_msg_callback('_on_gift', web_models.GiftMessage),
         # 有人上舰
-        'GUARD_BUY': __guard_buy_callback,
+        'GUARD_BUY': _make_msg_callback('_on_buy_guard', web_models.GuardBuyMessage),
         # 醒目留言
-        'SUPER_CHAT_MESSAGE': __super_chat_message_callback,
+        'SUPER_CHAT_MESSAGE': _make_msg_callback('_on_super_chat', web_models.SuperChatMessage),
         # 删除醒目留言
-        'SUPER_CHAT_MESSAGE_DELETE': __super_chat_message_delete_callback,
+        'SUPER_CHAT_MESSAGE_DELETE': _make_msg_callback('_on_super_chat_delete', web_models.SuperChatDeleteMessage),
+
+        #
+        # 开放平台消息
+        #
+
+        # 收到弹幕
+        'LIVE_OPEN_PLATFORM_DM': _make_msg_callback('_on_open_live_danmaku', open_models.DanmakuMessage),
+        # 有人送礼
+        'LIVE_OPEN_PLATFORM_SEND_GIFT': _make_msg_callback('_on_open_live_gift', open_models.GiftMessage),
+        # 有人上舰
+        'LIVE_OPEN_PLATFORM_GUARD': _make_msg_callback('_on_open_live_buy_guard', open_models.GuardBuyMessage),
+        # 醒目留言
+        'LIVE_OPEN_PLATFORM_SUPER_CHAT': _make_msg_callback('_on_open_live_super_chat', open_models.SuperChatMessage),
+        # 删除醒目留言
+        'LIVE_OPEN_PLATFORM_SUPER_CHAT_DEL': _make_msg_callback(
+            '_on_open_live_super_chat_delete', open_models.SuperChatDeleteMessage
+        ),
+        # 点赞
+        'LIVE_OPEN_PLATFORM_LIKE': _make_msg_callback('_on_open_live_like', open_models.LikeMessage),
     }
     """cmd -> 处理回调"""
-    # 忽略其他常见cmd
-    for cmd in IGNORED_CMDS:
-        _CMD_CALLBACK_DICT[cmd] = None
-    del cmd
 
     async def handle(self, client: ws_base.WebSocketClientBase, command: dict):
         cmd = command.get('cmd', '')
@@ -121,32 +127,72 @@ class BaseHandler(HandlerInterface):
         if callback is not None:
             await callback(self, client, command)
 
-    async def _on_heartbeat(self, client: ws_base.WebSocketClientBase, message: models.HeartbeatMessage):
+    async def _on_heartbeat(self, client: ws_base.WebSocketClientBase, message: web_models.HeartbeatMessage):
         """
-        收到心跳包（人气值）
+        收到心跳包
         """
 
-    async def _on_danmaku(self, client: ws_base.WebSocketClientBase, message: models.DanmakuMessage):
+    async def _on_danmaku(self, client: ws_base.WebSocketClientBase, message: web_models.DanmakuMessage):
         """
         收到弹幕
         """
 
-    async def _on_gift(self, client: ws_base.WebSocketClientBase, message: models.GiftMessage):
+    async def _on_gift(self, client: ws_base.WebSocketClientBase, message: web_models.GiftMessage):
         """
         收到礼物
         """
 
-    async def _on_buy_guard(self, client: ws_base.WebSocketClientBase, message: models.GuardBuyMessage):
+    async def _on_buy_guard(self, client: ws_base.WebSocketClientBase, message: web_models.GuardBuyMessage):
         """
         有人上舰
         """
 
-    async def _on_super_chat(self, client: ws_base.WebSocketClientBase, message: models.SuperChatMessage):
+    async def _on_super_chat(self, client: ws_base.WebSocketClientBase, message: web_models.SuperChatMessage):
         """
         醒目留言
         """
 
-    async def _on_super_chat_delete(self, client: ws_base.WebSocketClientBase, message: models.SuperChatDeleteMessage):
+    async def _on_super_chat_delete(
+        self, client: ws_base.WebSocketClientBase, message: web_models.SuperChatDeleteMessage
+    ):
         """
         删除醒目留言
+        """
+
+    #
+    # 开放平台消息
+    #
+
+    async def _on_open_live_danmaku(self, client: ws_base.WebSocketClientBase, message: open_models.DanmakuMessage):
+        """
+        收到弹幕
+        """
+
+    async def _on_open_live_gift(self, client: ws_base.WebSocketClientBase, message: open_models.GiftMessage):
+        """
+        收到礼物
+        """
+
+    async def _on_open_live_buy_guard(self, client: ws_base.WebSocketClientBase, message: open_models.GuardBuyMessage):
+        """
+        有人上舰
+        """
+
+    async def _on_open_live_super_chat(
+        self, client: ws_base.WebSocketClientBase, message: open_models.SuperChatMessage
+    ):
+        """
+        醒目留言
+        """
+
+    async def _on_open_live_super_chat_delete(
+        self, client: ws_base.WebSocketClientBase, message: open_models.SuperChatDeleteMessage
+    ):
+        """
+        删除醒目留言
+        """
+
+    async def _on_open_live_like(self, client: ws_base.WebSocketClientBase, message: open_models.LikeMessage):
+        """
+        点赞
         """

@@ -2,10 +2,12 @@
 import asyncio
 import http.cookies
 import random
+from typing import *
 
 import aiohttp
 
 import blivedm
+import blivedm.models.web as web_models
 
 # 直播间ID的取值看直播间URL
 TEST_ROOM_IDS = [
@@ -16,14 +18,16 @@ TEST_ROOM_IDS = [
     23105590,
 ]
 
-session = None
+session: Optional[aiohttp.ClientSession] = None
 
 
 async def main():
     init_session()
-
-    await run_single_client()
-    await run_multi_clients()
+    try:
+        await run_single_client()
+        await run_multi_clients()
+    finally:
+        await session.close()
 
 
 def init_session():
@@ -88,20 +92,20 @@ class MyHandler(blivedm.BaseHandler):
     #           f" uname={command['data']['uname']}")
     # _CMD_CALLBACK_DICT['INTERACT_WORD'] = __interact_word_callback  # noqa
 
-    async def _on_heartbeat(self, client: blivedm.BLiveClient, message: blivedm.HeartbeatMessage):
-        print(f'[{client.room_id}] 当前人气值：{message.popularity}')
+    async def _on_heartbeat(self, client: blivedm.BLiveClient, message: web_models.HeartbeatMessage):
+        print(f'[{client.room_id}] 心跳')
 
-    async def _on_danmaku(self, client: blivedm.BLiveClient, message: blivedm.DanmakuMessage):
+    async def _on_danmaku(self, client: blivedm.BLiveClient, message: web_models.DanmakuMessage):
         print(f'[{client.room_id}] {message.uname}：{message.msg}')
 
-    async def _on_gift(self, client: blivedm.BLiveClient, message: blivedm.GiftMessage):
+    async def _on_gift(self, client: blivedm.BLiveClient, message: web_models.GiftMessage):
         print(f'[{client.room_id}] {message.uname} 赠送{message.gift_name}x{message.num}'
               f' （{message.coin_type}瓜子x{message.total_coin}）')
 
-    async def _on_buy_guard(self, client: blivedm.BLiveClient, message: blivedm.GuardBuyMessage):
+    async def _on_buy_guard(self, client: blivedm.BLiveClient, message: web_models.GuardBuyMessage):
         print(f'[{client.room_id}] {message.username} 购买{message.gift_name}')
 
-    async def _on_super_chat(self, client: blivedm.BLiveClient, message: blivedm.SuperChatMessage):
+    async def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         print(f'[{client.room_id}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')
 
 

@@ -117,6 +117,13 @@ class BLiveClient(ws_base.WebSocketClientBase):
         return res
 
     async def _init_uid(self):
+        cookies = self._session.cookie_jar.filter_cookies(yarl.URL(UID_INIT_URL))
+        sessdata_cookie = cookies.get('SESSDATA', None)
+        if sessdata_cookie is None or sessdata_cookie.value == '':
+            # cookie都没有，不用请求了
+            self._uid = 0
+            return True
+
         try:
             async with self._session.get(
                 UID_INIT_URL,
