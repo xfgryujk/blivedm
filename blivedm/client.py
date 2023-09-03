@@ -5,6 +5,7 @@ import json
 import logging
 import ssl as ssl_
 import struct
+import zlib
 from typing import *
 
 import aiohttp
@@ -123,6 +124,7 @@ class BLiveClient:
         self._heartbeat_interval = heartbeat_interval
         self._ssl = ssl if ssl else ssl_._create_unverified_context()  # noqa
 
+        # TODO 没必要支持多个handler，改成单个吧
         self._handlers: List[handlers.HandlerInterface] = []
         """消息处理器，可动态增删"""
 
@@ -627,6 +629,10 @@ class BLiveClient:
                 # 压缩过的先解压，为了避免阻塞网络线程，放在其他线程执行
                 body = await asyncio.get_running_loop().run_in_executor(None, brotli.decompress, body)
                 await self._parse_ws_message(body)
+            elif header.ver == ProtoVer.DEFLATE:
+                # web端已经不用zlib压缩了，但是开放平台会用
+                body = await asyncio.get_running_loop().run_in_executor(None, zlib.decompress, body)
+                await self._parse_ws_message(body)
             elif header.ver == ProtoVer.NORMAL:
                 # 没压缩过的直接反序列化，因为有万恶的GIL，这里不能并行避免阻塞
                 if len(body) != 0:
@@ -661,6 +667,7 @@ class BLiveClient:
 
         :param command: 业务消息
         """
+        # TODO 考虑解析完整个WS包后再一次处理所有消息。另外用call_soon就不会阻塞网络协程了，也不用加shield
         # 外部代码可能不能正常处理取消，所以这里加shield
         results = await asyncio.shield(
             asyncio.gather(
