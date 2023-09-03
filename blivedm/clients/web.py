@@ -8,16 +8,13 @@ import aiohttp
 import yarl
 
 from . import ws_base
+from .. import utils
 
 __all__ = (
     'BLiveClient',
 )
 
 logger = logging.getLogger('blivedm')
-
-USER_AGENT = (
-    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
-)
 
 UID_INIT_URL = 'https://api.bilibili.com/x/web-interface/nav'
 BUVID_INIT_URL = 'https://data.bilibili.com/v/'
@@ -123,7 +120,7 @@ class BLiveClient(ws_base.WebSocketClientBase):
         try:
             async with self._session.get(
                 UID_INIT_URL,
-                headers={'User-Agent': USER_AGENT},
+                headers={'User-Agent': utils.USER_AGENT},
                 ssl=self._ssl
             ) as res:
                 if res.status != 200:
@@ -162,7 +159,7 @@ class BLiveClient(ws_base.WebSocketClientBase):
         try:
             async with self._session.get(
                 BUVID_INIT_URL,
-                headers={'User-Agent': USER_AGENT},
+                headers={'User-Agent': utils.USER_AGENT},
                 ssl=self._ssl
             ) as res:
                 if res.status != 200:
@@ -176,7 +173,7 @@ class BLiveClient(ws_base.WebSocketClientBase):
         try:
             async with self._session.get(
                 ROOM_INIT_URL,
-                headers={'User-Agent': USER_AGENT},
+                headers={'User-Agent': utils.USER_AGENT},
                 params={
                     'room_id': self._tmp_room_id
                 },
@@ -209,7 +206,7 @@ class BLiveClient(ws_base.WebSocketClientBase):
         try:
             async with self._session.get(
                 DANMAKU_SERVER_CONF_URL,
-                headers={'User-Agent': USER_AGENT},
+                headers={'User-Agent': utils.USER_AGENT},
                 params={
                     'id': self._room_id,
                     'type': 0

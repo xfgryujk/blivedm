@@ -11,7 +11,7 @@ from typing import *
 import aiohttp
 import brotli
 
-from .. import handlers
+from .. import handlers, utils
 
 logger = logging.getLogger('blivedm')
 
@@ -259,6 +259,7 @@ class WebSocketClientBase:
                 # 连接
                 async with self._session.ws_connect(
                     self._get_ws_url(retry_count),
+                    headers={'User-Agent': utils.USER_AGENT},  # web端的token也会签名UA
                     receive_timeout=self._heartbeat_interval + 5,
                     ssl=self._ssl
                 ) as websocket:
