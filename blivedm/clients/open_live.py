@@ -29,8 +29,8 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
 
     文档参考：https://open-live.bilibili.com/document/
 
-    :param access_key: 在开放平台申请的access_key
-    :param access_secret: 在开放平台申请的access_secret
+    :param access_key_id: 在开放平台申请的access_key_id
+    :param access_key_secret: 在开放平台申请的access_key_secret
     :param app_id: 在开放平台创建的项目ID
     :param room_owner_auth_code: 主播身份码
     :param session: cookie、连接池
@@ -40,8 +40,8 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
 
     def __init__(
         self,
-        access_key: str,
-        access_secret: str,
+        access_key_id: str,
+        access_key_secret: str,
         app_id: int,
         room_owner_auth_code: str,
         *,
@@ -51,8 +51,8 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
     ):
         super().__init__(session, heartbeat_interval)
 
-        self._access_key = access_key
-        self._access_secret = access_secret
+        self._access_key_id = access_key_id
+        self._access_key_secret = access_key_secret
         self._app_id = app_id
         self._room_owner_auth_code = room_owner_auth_code
         self._game_heartbeat_interval = game_heartbeat_interval
@@ -122,7 +122,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
     def _request_open_live(self, url, body: dict):
         body_bytes = json.dumps(body).encode('utf-8')
         headers = {
-            'x-bili-accesskeyid': self._access_key,
+            'x-bili-accesskeyid': self._access_key_id,
             'x-bili-content-md5': hashlib.md5(body_bytes).hexdigest(),
             'x-bili-signature-method': 'HMAC-SHA256',
             'x-bili-signature-nonce': str(random.randint(0, 999999999)),
@@ -135,7 +135,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
             for key, value in headers.items()
         )
         signature = hmac.new(
-            self._access_secret.encode('utf-8'), str_to_sign.encode('utf-8'), hashlib.sha256
+            self._access_key_secret.encode('utf-8'), str_to_sign.encode('utf-8'), hashlib.sha256
         ).hexdigest()
         headers['Authorization'] = signature
 

@@ -6,8 +6,8 @@ import blivedm.models.open_live as open_models
 import blivedm.models.web as web_models
 
 # 在开放平台申请的开发者密钥
-ACCESS_KEY = ''
-ACCESS_SECRET = ''
+ACCESS_KEY_ID = ''
+ACCESS_KEY_SECRET = ''
 # 在开放平台创建的项目ID
 APP_ID = 0
 # 主播身份码
@@ -23,8 +23,8 @@ async def run_single_client():
     演示监听一个直播间
     """
     client = blivedm.OpenLiveClient(
-        access_key=ACCESS_KEY,
-        access_secret=ACCESS_SECRET,
+        access_key_id=ACCESS_KEY_ID,
+        access_key_secret=ACCESS_KEY_SECRET,
         app_id=APP_ID,
         room_owner_auth_code=ROOM_OWNER_AUTH_CODE,
     )
