@@ -218,10 +218,6 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         """
         定时发送项目心跳包的回调
         """
-        if not self.is_running:
-            self._game_heartbeat_timer_handle = None
-            return
-
         self._game_heartbeat_timer_handle = asyncio.get_running_loop().call_later(
             self._game_heartbeat_interval, self._on_send_game_heartbeat
         )
