@@ -48,9 +48,9 @@ class HandlerInterface:
     def handle(self, client: ws_base.WebSocketClientBase, command: dict):
         raise NotImplementedError
 
-    def on_stopped_by_exception(self, client: ws_base.WebSocketClientBase, exception: Exception):
+    def on_client_stopped(self, client: ws_base.WebSocketClientBase, exception: Optional[Exception]):
         """
-        当客户端被异常停止时调用。可以在这里close或者重新start
+        当客户端停止时调用。可以在这里close或者重新start
         """
 
 

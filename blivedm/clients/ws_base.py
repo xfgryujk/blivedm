@@ -232,8 +232,8 @@ class WebSocketClientBase:
             logger.debug('room=%s _network_coroutine() finished', self.room_id)
             self._network_future = None
 
-        if exc is not None and self._handler is not None:
-            self._handler.on_stopped_by_exception(self, exc)
+        if self._handler is not None:
+            self._handler.on_client_stopped(self, exc)
 
     async def _network_coroutine(self):
         """
@@ -454,6 +454,8 @@ class WebSocketClientBase:
 
         :param command: 业务消息
         """
+        if self._handler is None:
+            return
         try:
             # 为什么不做成异步的：
             # 1. 为了保持处理消息的顺序，这里不使用call_soon、create_task等方法延迟处理
