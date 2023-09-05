@@ -99,6 +99,7 @@ class WebSocketClientBase:
 
         self._heartbeat_interval = heartbeat_interval
 
+        self._need_init_room = True
         self._handler: Optional[handlers.HandlerInterface] = None
         """消息处理器"""
 
@@ -244,11 +245,11 @@ class WebSocketClientBase:
         """
         网络协程，负责连接服务器、接收消息、解包
         """
-        await self._on_network_coroutine_start()
-
         retry_count = 0
         while True:
             try:
+                await self._on_before_ws_connect()
+
                 # 连接
                 async with self._session.ws_connect(
                     self._get_ws_url(retry_count),
@@ -271,8 +272,7 @@ class WebSocketClientBase:
             except AuthError:
                 # 认证失败了，应该重新获取token再重连
                 logger.exception('room=%d auth failed, trying init_room() again', self.room_id)
-                if not await self.init_room():
-                    raise InitError('init_room() failed')
+                self._need_init_room = True
             finally:
                 self._websocket = None
                 await self._on_ws_close()
@@ -282,10 +282,16 @@ class WebSocketClientBase:
             logger.warning('room=%d is reconnecting, retry_count=%d', self.room_id, retry_count)
             await asyncio.sleep(1)
 
-    async def _on_network_coroutine_start(self):
+    async def _on_before_ws_connect(self):
         """
-        在_network_coroutine开头运行，可以用来初始化房间
+        在每次建立连接之前调用，可以用来初始化房间
         """
+        if not self._need_init_room:
+            return
+
+        if not await self.init_room():
+            raise InitError('init_room() failed')
+        self._need_init_room = False
 
     def _get_ws_url(self, retry_count) -> str:
         """

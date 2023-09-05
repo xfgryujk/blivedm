@@ -65,15 +65,9 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         self._auth_body: Optional[str] = None
         """连接弹幕服务器用的认证包内容"""
         self._game_id: Optional[str] = None
-        """项目场次ID，仅用于互动玩法类项目，其他项目为空字符串"""
+        """项目场次ID"""
 
         # 在运行时初始化的字段
-        self._websocket: Optional[aiohttp.ClientWebSocketResponse] = None
-        """WebSocket连接"""
-        self._network_future: Optional[asyncio.Future] = None
-        """网络协程的future"""
-        self._heartbeat_timer_handle: Optional[asyncio.TimerHandle] = None
-        """发连接心跳包定时器的handle"""
         self._game_heartbeat_timer_handle: Optional[asyncio.TimerHandle] = None
         """发项目心跳包定时器的handle"""
 
@@ -101,7 +95,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
     @property
     def game_id(self) -> Optional[str]:
         """
-        项目场次ID，仅用于互动玩法类项目，其他项目为空字符串，调用init_room后初始化
+        项目场次ID，调用init_room后初始化
         """
         return self._game_id
 
@@ -191,7 +185,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
 
     async def _end_game(self):
         """
-        关闭项目。互动玩法类项目建议断开连接时保证调用到这个函数（close会调用），否则可能短时间内无法重复连接同一个房间
+        关闭项目。建议关闭客户端时保证调用到这个函数（close会调用），否则可能短时间内无法重复连接同一个房间
         """
         if self._game_id in (None, ''):
             return True
@@ -206,9 +200,14 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
                                    self._room_id, res.status, res.reason)
                     return False
                 data = await res.json()
-                if data['code'] != 0:
+                code = data['code']
+                if code != 0:
+                    if code in (7000, 7003):
+                        # 项目已经关闭了也算成功
+                        return True
+
                     logger.warning('room=%d _end_game() failed, code=%d, message=%s, request_id=%s',
-                                   self._room_id, data['code'], data['message'], data['request_id'])
+                                   self._room_id, code, data['message'], data['request_id'])
                     return False
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
             logger.exception('room=%d _end_game() failed:', self._room_id)
@@ -230,40 +229,40 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
 
     async def _send_game_heartbeat(self):
         """
-        发送项目心跳包，仅用于互动玩法类项目
+        发送项目心跳包
         """
         if self._game_id in (None, ''):
-            logger.warning('game=%d heartbeat failed, game_id not found', self._game_id)
+            logger.warning('game=%d _send_game_heartbeat() failed, game_id not found', self._game_id)
             return False
 
         try:
+            # 保存一下，防止await之后game_id改变
+            game_id = self._game_id
             async with self._request_open_live(
                 HEARTBEAT_URL,
-                {'game_id': self._game_id}
+                {'game_id': game_id}
             ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _send_game_heartbeat() failed, status=%d, reason=%s',
                                    self._room_id, res.status, res.reason)
                     return False
                 data = await res.json()
-                if data['code'] != 0:
-                    # TODO 遇到7003则重新init_room
+                code = data['code']
+                if code != 0:
                     logger.warning('room=%d _send_game_heartbeat() failed, code=%d, message=%s, request_id=%s',
-                                   self._room_id, data['code'], data['message'], data['request_id'])
+                                   self._room_id, code, data['message'], data['request_id'])
+
+                    if code == 7003 and self._game_id == game_id:
+                        # 项目异常关闭，可能是心跳超时，需要重新开启项目
+                        self._need_init_room = True
+                        if self._websocket is not None and not self._websocket.closed:
+                            await self._websocket.close()
+
                     return False
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
             logger.exception('room=%d _send_game_heartbeat() failed:', self._room_id)
             return False
         return True
-
-    async def _on_network_coroutine_start(self):
-        """
-        在_network_coroutine开头运行，可以用来初始化房间
-        """
-        # 如果之前未初始化则初始化
-        if self._auth_body is None:
-            if not await self.init_room():
-                raise ws_base.InitError('init_room() failed')
 
     def _get_ws_url(self, retry_count) -> str:
         """

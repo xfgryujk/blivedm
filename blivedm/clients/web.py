@@ -232,15 +232,6 @@ class BLiveClient(ws_base.WebSocketClientBase):
             return False
         return True
 
-    async def _on_network_coroutine_start(self):
-        """
-        在_network_coroutine开头运行，可以用来初始化房间
-        """
-        # 如果之前未初始化则初始化
-        if self._host_server_token is None:
-            if not await self.init_room():
-                raise ws_base.InitError('init_room() failed')
-
     def _get_ws_url(self, retry_count) -> str:
         """
         返回WebSocket连接的URL，可以在这里做故障转移和负载均衡
