@@ -165,17 +165,17 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
                 {'code': self._room_owner_auth_code, 'app_id': self._app_id}
             ) as res:
                 if res.status != 200:
-                    logger.warning('init_room() failed, status=%d, reason=%s', res.status, res.reason)
+                    logger.warning('_start_game() failed, status=%d, reason=%s', res.status, res.reason)
                     return False
                 data = await res.json()
                 if data['code'] != 0:
-                    logger.warning('init_room() failed, code=%d, message=%s, request_id=%s',
+                    logger.warning('_start_game() failed, code=%d, message=%s, request_id=%s',
                                    data['code'], data['message'], data['request_id'])
                     return False
                 if not self._parse_start_game(data['data']):
                     return False
         except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-            logger.exception('init_room() failed:')
+            logger.exception('_start_game() failed:')
             return False
         return True
 
@@ -247,6 +247,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
                     return False
                 data = await res.json()
                 if data['code'] != 0:
+                    # TODO 遇到7003则重新init_room
                     logger.warning('room=%d _send_game_heartbeat() failed, code=%d, message=%s, request_id=%s',
                                    self._room_id, data['code'], data['message'], data['request_id'])
                     return False
@@ -274,5 +275,4 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         """
         发送认证包
         """
-        auth_body = json.loads(self._auth_body)
-        await self._websocket.send_bytes(self._make_packet(auth_body, ws_base.Operation.AUTH))
+        await self._websocket.send_bytes(self._make_packet(self._auth_body, ws_base.Operation.AUTH))

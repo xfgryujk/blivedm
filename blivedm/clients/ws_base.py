@@ -197,7 +197,7 @@ class WebSocketClientBase:
         raise NotImplementedError
 
     @staticmethod
-    def _make_packet(data: dict, operation: int) -> bytes:
+    def _make_packet(data: Union[dict, str, bytes], operation: int) -> bytes:
         """
         创建一个要发送给服务器的包
 
@@ -205,7 +205,12 @@ class WebSocketClientBase:
         :param operation: 操作码，见Operation
         :return: 整个包的数据
         """
-        body = json.dumps(data).encode('utf-8')
+        if isinstance(data, dict):
+            body = json.dumps(data).encode('utf-8')
+        elif isinstance(data, str):
+            body = data.encode('utf-8')
+        else:
+            body = data
         header = HEADER_STRUCT.pack(*HeaderTuple(
             pack_len=HEADER_STRUCT.size + len(body),
             raw_header_size=HEADER_STRUCT.size,
@@ -351,8 +356,8 @@ class WebSocketClientBase:
 
         try:
             await self._parse_ws_message(message.data)
-        except (asyncio.CancelledError, AuthError):
-            # 正常停止、认证失败，让外层处理
+        except AuthError:
+            # 认证失败，让外层处理
             raise
         except Exception:  # noqa
             logger.exception('room=%d _parse_ws_message() error:', self.room_id)
@@ -426,8 +431,6 @@ class WebSocketClientBase:
                     try:
                         body = json.loads(body.decode('utf-8'))
                         self._handle_command(body)
-                    except asyncio.CancelledError:
-                        raise
                     except Exception:
                         logger.error('room=%d, body=%s', self.room_id, body)
                         raise

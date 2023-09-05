@@ -161,6 +161,12 @@ class GiftMessage:
 
     @classmethod
     def from_command(cls, data: dict):
+        combo_info = data.get('combo_info', None)
+        if combo_info is None:
+            combo_info = ComboInfo()
+        else:
+            combo_info = ComboInfo.from_dict(combo_info)
+
         return cls(
             room_id=data['room_id'],
             uid=data['uid'],
@@ -179,8 +185,8 @@ class GiftMessage:
             anchor_info=AnchorInfo.from_dict(data['anchor_info']),
             msg_id=data['msg_id'],
             gift_icon=data['gift_icon'],
-            combo_gift=data['combo_gift'],
-            combo_info=ComboInfo.from_dict(data['combo_info']),
+            combo_gift=data.get('combo_gift', False),  # 官方的调试工具没发这个字段
+            combo_info=combo_info,  # 官方的调试工具没发这个字段
         )
 
 
@@ -355,6 +361,8 @@ class LikeMessage:
     """粉丝勋章名"""
     fans_medal_level: int = 0
     """对应房间勋章信息"""
+    msg_id: str = ''  # 官方文档表格里没列出这个字段，但是参考JSON里面有
+    """消息唯一id"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -368,4 +376,5 @@ class LikeMessage:
             fans_medal_wearing_status=data['fans_medal_wearing_status'],
             fans_medal_name=data['fans_medal_name'],
             fans_medal_level=data['fans_medal_level'],
+            msg_id=data.get('msg_id', ''),  # 官方文档表格里没列出这个字段，但是参考JSON里面有
         )
