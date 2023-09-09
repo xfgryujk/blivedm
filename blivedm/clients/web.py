@@ -232,6 +232,16 @@ class BLiveClient(ws_base.WebSocketClientBase):
             return False
         return True
 
+    async def _on_before_ws_connect(self, retry_count):
+        """
+        在每次建立连接之前调用，可以用来初始化房间
+        """
+        # 重连次数太多则重新init_room，保险
+        reinit_period = max(3, len(self._host_server_list or ()))
+        if retry_count > 0 and retry_count % reinit_period == 0:
+            self._need_init_room = True
+        await super()._on_before_ws_connect(retry_count)
+
     def _get_ws_url(self, retry_count) -> str:
         """
         返回WebSocket连接的URL，可以在这里做故障转移和负载均衡

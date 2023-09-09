@@ -248,7 +248,7 @@ class WebSocketClientBase:
         retry_count = 0
         while True:
             try:
-                await self._on_before_ws_connect()
+                await self._on_before_ws_connect(retry_count)
 
                 # 连接
                 async with self._session.ws_connect(
@@ -282,7 +282,7 @@ class WebSocketClientBase:
             logger.warning('room=%d is reconnecting, retry_count=%d', self.room_id, retry_count)
             await asyncio.sleep(1)
 
-    async def _on_before_ws_connect(self):
+    async def _on_before_ws_connect(self, retry_count):
         """
         在每次建立连接之前调用，可以用来初始化房间
         """
