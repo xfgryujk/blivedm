@@ -349,8 +349,8 @@ class LikeMessage:
     """用户UID"""
     uface: str = ''
     """用户头像"""
-    timestamp: int = 0
-    """时间秒级时间戳"""
+    # timestamp: int = 0  # 官方文档里有这个字段，实际上没有
+    # """时间秒级时间戳"""
     room_id: int = 0
     """发生的直播间"""
     like_text: str = ''
@@ -370,7 +370,7 @@ class LikeMessage:
             uname=data['uname'],
             uid=data['uid'],
             uface=data['uface'],
-            timestamp=data['timestamp'],
+            # timestamp=data['timestamp'],  # 官方文档里有这个字段，实际上没有
             room_id=data['room_id'],
             like_text=data['like_text'],
             fans_medal_wearing_status=data['fans_medal_wearing_status'],
