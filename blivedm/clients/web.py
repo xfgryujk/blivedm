@@ -257,7 +257,7 @@ class BLiveClient(ws_base.WebSocketClientBase):
             'uid': self._uid,
             'roomid': self._room_id,
             'protover': 3,
-            'platform': 'web',
+            'platform': 'web' if self._uid else 'blivedm',  # 未登录时platform不使用web，用户名不会打码
             'type': 2,
             'buvid': self._get_buvid(),
         }
