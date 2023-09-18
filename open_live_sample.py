@@ -51,8 +51,9 @@ class MyHandler(blivedm.BaseHandler):
 
     def _on_open_live_gift(self, client: blivedm.OpenLiveClient, message: open_models.GiftMessage):
         coin_type = '金瓜子' if message.paid else '银瓜子'
+        total_coin = message.price * message.gift_num
         print(f'[{message.room_id}] {message.uname} 赠送{message.gift_name}x{message.gift_num}'
-              f' （{coin_type}x{message.price}）')
+              f' （{coin_type}x{total_coin}）')
 
     def _on_open_live_buy_guard(self, client: blivedm.OpenLiveClient, message: open_models.GuardBuyMessage):
         print(f'[{message.room_id}] {message.user_info.uname} 购买 大航海等级={message.guard_level}')
