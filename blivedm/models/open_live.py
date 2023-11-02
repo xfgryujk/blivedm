@@ -349,12 +349,14 @@ class LikeMessage:
     """用户UID"""
     uface: str = ''
     """用户头像"""
-    # timestamp: int = 0  # 官方文档里有这个字段，实际上没有
-    # """时间秒级时间戳"""
+    timestamp: int = 0
+    """时间秒级时间戳"""
     room_id: int = 0
     """发生的直播间"""
     like_text: str = ''
     """点赞文案(“xxx点赞了”)"""
+    like_count: int = 0  # 官方文档把这个字段名打错了，这个B文档真是一点都靠不住
+    """对单个用户最近2秒的点赞次数聚合"""
     fans_medal_wearing_status: bool = False
     """该房间粉丝勋章佩戴情况"""
     fans_medal_name: str = ''
@@ -363,6 +365,7 @@ class LikeMessage:
     """对应房间勋章信息"""
     msg_id: str = ''  # 官方文档表格里没列出这个字段，但是参考JSON里面有
     """消息唯一id"""
+    # 还有个guard_level，但官方文档没有出现这个字段，就不添加了
 
     @classmethod
     def from_command(cls, data: dict):
@@ -370,9 +373,10 @@ class LikeMessage:
             uname=data['uname'],
             uid=data['uid'],
             uface=data['uface'],
-            # timestamp=data['timestamp'],  # 官方文档里有这个字段，实际上没有
+            timestamp=data['timestamp'],
             room_id=data['room_id'],
             like_text=data['like_text'],
+            like_count=data['like_count'],
             fans_medal_wearing_status=data['fans_medal_wearing_status'],
             fans_medal_name=data['fans_medal_name'],
             fans_medal_level=data['fans_medal_level'],
