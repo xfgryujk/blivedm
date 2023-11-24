@@ -176,10 +176,12 @@ class WebSocketClientBase:
         """
         便利函数，停止本客户端并释放本客户端的资源，调用后本客户端将不可用
         """
-        if self.is_running:
-            self.stop()
-            await self.join()
-        await self.close()
+        try:
+            if self.is_running:
+                self.stop()
+                await self.join()
+        finally:
+            await self.close()
 
     async def join(self):
         """
