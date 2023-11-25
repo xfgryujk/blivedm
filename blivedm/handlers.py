@@ -67,9 +67,7 @@ class BaseHandler(HandlerInterface):
     """
 
     def __danmu_msg_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_danmaku(
-            client, web_models.DanmakuMessage.from_command(command['info'], command.get('dm_v2', ''))
-        )
+        return self._on_danmaku(client, web_models.DanmakuMessage.from_command(command['info']))
 
     _CMD_CALLBACK_DICT: Dict[
         str,
