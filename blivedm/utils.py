@@ -5,13 +5,13 @@ USER_AGENT = (
 
 
 def make_constant_retry_policy(interval: float):
-    def get_interval(_retry_count: int):
+    def get_interval(_retry_count: int, _total_retry_count: int):
         return interval
     return get_interval
 
 
 def make_linear_retry_policy(start_interval: float, interval_step: float, max_interval: float):
-    def get_interval(retry_count: int):
+    def get_interval(retry_count: int, _total_retry_count: int):
         return min(
             start_interval + (retry_count - 1) * interval_step,
             max_interval
