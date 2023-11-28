@@ -5,7 +5,7 @@ import hashlib
 import hmac
 import json
 import logging
-import random
+import uuid
 from typing import *
 
 import aiohttp
@@ -119,7 +119,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
             'x-bili-accesskeyid': self._access_key_id,
             'x-bili-content-md5': hashlib.md5(body_bytes).hexdigest(),
             'x-bili-signature-method': 'HMAC-SHA256',
-            'x-bili-signature-nonce': str(random.randint(0, 999999999)),
+            'x-bili-signature-nonce': uuid.uuid4().hex,
             'x-bili-signature-version': '1.0',
             'x-bili-timestamp': str(int(datetime.datetime.now().timestamp())),
         }
