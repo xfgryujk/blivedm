@@ -30,6 +30,20 @@ class HeartbeatMessage:
 
 
 @dataclasses.dataclass
+class ClickData:
+    click_count: int = 0
+    uname: str = ''
+    like_text: str = ''
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            click_count=data.get('click_count', 0),
+            uname=data.get('uname', ''),  # 设置默认值，这里假设默认值为''
+            like_text=data.get('like_text', ''),
+        )
+
+@dataclasses.dataclass
 class DanmakuMessage:
     """
     弹幕消息
@@ -198,6 +212,133 @@ class DanmakuMessage:
         except (json.JSONDecodeError, TypeError):
             return {}
 
+# {
+# 	"terminals": [
+# 		4,
+# 		5
+# 	],
+# 	"content_segments": [
+# 		{
+# 			"type": 1,
+# 			"font_color": "#61666d",
+# 			"font_color_dark": "#a2a7ae",
+# 			"text": "恭喜 <%thuGreth%> 成为 <%小花花%> 星球守护者~",
+# 			"highlight_font_color": "#FFB027",
+# 			"highlight_font_color_dark": "#FFB027"
+# 		}
+# 	]
+# }
+# 特殊通知弹幕
+class ContentSegment():
+    type: int
+    font_color: str
+    font_color_dark: str
+    text: str
+    highlight_font_color: str
+    highlight_font_color_dark: str
+
+class SpacialDanMaku:
+    terminals: List[int]
+    content_segments: List[ContentSegment]
+
+    @classmethod
+    def from_command(cls, data: dict):
+        terminals = data.get('terminals', [])
+        content_segments_data = data.get('content_segments', [])
+        content_segments = [ContentSegment() for _ in content_segments_data]
+        return cls(terminals=terminals,
+                   content_segments=content_segments)
+
+
+# {
+# 	"contribution": {
+# 		"grade": 3
+# 	},
+# 	"contribution_v2": {
+# 		"grade": 2,
+# 		"rank_type": "monthly_rank",
+# 		"text": "月榜前3用户"
+# 	},
+# 	"core_user_type": 0,
+# 	"dmscore": 28,
+# 	"fans_medal": {
+# 		"anchor_roomid": 0,
+# 		"guard_level": 0,
+# 		"icon_id": 0,
+# 		"is_lighted": 0,
+# 		"medal_color": 0,
+# 		"medal_color_border": 0,
+# 		"medal_color_end": 0,
+# 		"medal_color_start": 0,
+# 		"medal_level": 0,
+# 		"medal_name": "",
+# 		"score": 0,
+# 		"special": "",
+# 		"target_id": 0
+# 	},
+# 	"group_medal": "",
+# 	"identities": [
+# 		1
+# 	],
+# 	"is_mystery": false,
+# 	"is_spread": 0,
+# 	"msg_type": 1,
+# 	"privilege_type": 0,
+# 	"roomid": 30886597,
+# 	"score": 1706174295693,
+# 	"spread_desc": "",
+# 	"spread_info": "",
+# 	"tail_icon": 0,
+# 	"tail_text": "",
+# 	"timestamp": 1706174295,
+# 	"trigger_time": 1706174294633680000,
+# 	"uid": 90383004,
+# 	"uinfo": {
+# 		"base": {
+# 			"face": "https://i0.hdslb.com/bfs/face/a3720664af7a993fc45ce48f190d02913d1f2c85.jpg",
+# 			"is_mystery": false,
+# 			"name": "月上小狗",
+# 			"name_color": 0,
+# 			"official_info": {
+# 				"desc": "",
+# 				"role": 0,
+# 				"title": "",
+# 				"type": -1
+# 			},
+# 			"origin_info": {
+# 				"face": "https://i0.hdslb.com/bfs/face/a3720664af7a993fc45ce48f190d02913d1f2c85.jpg",
+# 				"name": "月上小狗"
+# 			},
+# 			"risk_ctrl_info": {
+# 				"face": "https://i0.hdslb.com/bfs/face/a3720664af7a993fc45ce48f190d02913d1f2c85.jpg",
+# 				"name": "月上小狗"
+# 			}
+# 		},
+# 		"guard": "",
+# 		"guard_leader": "",
+# 		"medal": "",
+# 		"title": "",
+# 		"uhead_frame": "",
+# 		"uid": 90383004,
+# 		"wealth": ""
+# 	},
+# 	"uname": "月上小狗",
+# 	"uname_color": ""
+# }
+# 用户进入直播间
+@dataclasses.dataclass
+class UserInData:
+    uname: str = ''
+    uname_color: str=''
+    dmscore: int=0
+
+    @classmethod
+    def from_command(cls, data: dict):
+        return cls(
+            uname=data.get('uname', ''),  # 设置默认值，这里假设默认值为''
+            uname_color=data.get('uname_color', ''),
+            dmscore=data.get('dmscore', 0),
+        )
 
 @dataclasses.dataclass
 class GiftMessage:
