@@ -24,7 +24,9 @@ class DanmakuMessage:
     uname: str = ''
     """用户昵称"""
     uid: int = 0
-    """用户UID"""
+    """用户UID(即将废弃)"""
+    open_id: str = ''
+    """用户唯一标识(2024-03-11后上线)"""
     uface: str = ''
     """用户头像"""
     timestamp: int = 0
@@ -53,6 +55,7 @@ class DanmakuMessage:
         return cls(
             uname=data['uname'],
             uid=data['uid'],
+            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
             uface=data['uface'],
             timestamp=data['timestamp'],
             room_id=data['room_id'],
@@ -75,6 +78,8 @@ class AnchorInfo:
 
     uid: int = 0
     """收礼主播uid"""
+    open_id: str = ''
+    """收礼主播唯一标识(2024-03-11后上线)"""
     uname: str = ''
     """收礼主播昵称"""
     uface: str = ''
@@ -84,6 +89,7 @@ class AnchorInfo:
     def from_dict(cls, data: dict):
         return cls(
             uid=data['uid'],
+            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
             uname=data['uname'],
             uface=data['uface'],
         )
@@ -123,7 +129,9 @@ class GiftMessage:
     room_id: int = 0
     """房间号"""
     uid: int = 0
-    """送礼用户UID"""
+    """送礼用户UID(即将废弃)"""
+    open_id: str = ''
+    """用户唯一标识(2024-03-11后上线)"""
     uname: str = ''
     """送礼用户昵称"""
     uface: str = ''
@@ -135,7 +143,7 @@ class GiftMessage:
     gift_num: int = 0
     """赠送道具数量"""
     price: int = 0
-    """（礼物单价）支付金额(1000 = 1元 = 10电池),盲盒:爆出道具的价值"""  # 这个B  站文档又不写清楚是单价还是总价
+    """礼物爆出单价，(1000 = 1元 = 10电池),盲盒:爆出道具的价值"""
     paid: bool = False
     """是否是付费道具"""
     fans_medal_level: int = 0
@@ -170,6 +178,7 @@ class GiftMessage:
         return cls(
             room_id=data['room_id'],
             uid=data['uid'],
+            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
             uname=data['uname'],
             uface=data['uface'],
             gift_id=data['gift_id'],
@@ -197,7 +206,9 @@ class UserInfo:
     """
 
     uid: int = 0
-    """用户uid"""
+    """用户UID(即将废弃)"""
+    open_id: str = ''
+    """用户唯一标识(2024-03-11后上线)"""
     uname: str = ''
     """用户昵称"""
     uface: str = ''
@@ -207,6 +218,7 @@ class UserInfo:
     def from_dict(cls, data: dict):
         return cls(
             uid=data['uid'],
+            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
             uname=data['uname'],
             uface=data['uface'],
         )
@@ -226,6 +238,8 @@ class GuardBuyMessage:
     """大航海数量"""
     guard_unit: str = ''
     """大航海单位"""
+    price: int = 0
+    """大航海金瓜子"""
     fans_medal_level: int = 0
     """粉丝勋章等级"""
     fans_medal_name: str = ''
@@ -246,6 +260,7 @@ class GuardBuyMessage:
             guard_level=data['guard_level'],
             guard_num=data['guard_num'],
             guard_unit=data['guard_unit'],
+            price=data['price'],
             fans_medal_level=data['fans_medal_level'],
             fans_medal_name=data['fans_medal_name'],
             fans_medal_wearing_status=data['fans_medal_wearing_status'],
@@ -264,7 +279,9 @@ class SuperChatMessage:
     room_id: int = 0
     """直播间id"""
     uid: int = 0
-    """购买用户UID"""
+    """用户UID(即将废弃)"""
+    open_id: str = ''
+    """用户唯一标识(2024-03-11后上线)"""
     uname: str = ''
     """购买的用户昵称"""
     uface: str = ''
@@ -297,6 +314,7 @@ class SuperChatMessage:
         return cls(
             room_id=data['room_id'],
             uid=data['uid'],
+            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
             uname=data['uname'],
             uface=data['uface'],
             message_id=data['message_id'],
@@ -346,7 +364,9 @@ class LikeMessage:
     uname: str = ''
     """用户昵称"""
     uid: int = 0
-    """用户UID"""
+    """用户UID(即将废弃)"""
+    open_id: str = ''
+    """用户唯一标识(2024-03-11后上线)"""
     uface: str = ''
     """用户头像"""
     timestamp: int = 0
@@ -355,7 +375,7 @@ class LikeMessage:
     """发生的直播间"""
     like_text: str = ''
     """点赞文案(“xxx点赞了”)"""
-    like_count: int = 0  # 官方文档把这个字段名打错了，这个B文档真是一点都靠不住
+    like_count: int = 0
     """对单个用户最近2秒的点赞次数聚合"""
     fans_medal_wearing_status: bool = False
     """该房间粉丝勋章佩戴情况"""
@@ -372,6 +392,7 @@ class LikeMessage:
         return cls(
             uname=data['uname'],
             uid=data['uid'],
+            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
             uface=data['uface'],
             timestamp=data['timestamp'],
             room_id=data['room_id'],

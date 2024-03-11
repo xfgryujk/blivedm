@@ -18,7 +18,7 @@ TEST_ROOM_IDS = [
     23105590,
 ]
 
-# 这里填一个已登录账号的cookie。不填cookie也可以连接，但是收到弹幕的用户名会打码，UID会变成0
+# 这里填一个已登录账号的cookie的SESSDATA字段的值。不填也可以连接，但是收到弹幕的用户名会打码，UID会变成0
 SESSDATA = ''
 
 session: Optional[aiohttp.ClientSession] = None

@@ -2,7 +2,7 @@
 
 Python获取bilibili直播弹幕的库，使用WebSocket协议，支持web端和B站直播开放平台两种接口
 
-[协议解释](https://blog.csdn.net/xfgryujk/article/details/80306776)（有点过时了，总体是没错的）
+[协议解释](https://open-live.bilibili.com/document/657d8e34-f926-a133-16c0-300c1afc6e6b)
 
 基于本库开发的一个应用：[blivechat](https://github.com/xfgryujk/blivechat)
 
@@ -15,4 +15,4 @@ Python获取bilibili直播弹幕的库，使用WebSocket协议，支持web端和
     pip install -r requirements.txt
     ```
 
-3. 例程看[sample.py](./sample.py)和[open_live_sample.py](./open_live_sample.py)
+3. web端例程在[sample.py](./sample.py)，B站直播开放平台例程在[open_live_sample.py](./open_live_sample.py)
