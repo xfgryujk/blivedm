@@ -55,7 +55,7 @@ class DanmakuMessage:
         return cls(
             uname=data['uname'],
             uid=data['uid'],
-            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
+            open_id=data['open_id'],
             uface=data['uface'],
             timestamp=data['timestamp'],
             room_id=data['room_id'],
@@ -89,7 +89,7 @@ class AnchorInfo:
     def from_dict(cls, data: dict):
         return cls(
             uid=data['uid'],
-            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
+            open_id=data['open_id'],
             uname=data['uname'],
             uface=data['uface'],
         )
@@ -178,7 +178,7 @@ class GiftMessage:
         return cls(
             room_id=data['room_id'],
             uid=data['uid'],
-            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
+            open_id=data['open_id'],
             uname=data['uname'],
             uface=data['uface'],
             gift_id=data['gift_id'],
@@ -218,7 +218,7 @@ class UserInfo:
     def from_dict(cls, data: dict):
         return cls(
             uid=data['uid'],
-            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
+            open_id=data['open_id'],
             uname=data['uname'],
             uface=data['uface'],
         )
@@ -314,7 +314,7 @@ class SuperChatMessage:
         return cls(
             room_id=data['room_id'],
             uid=data['uid'],
-            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
+            open_id=data['open_id'],
             uname=data['uname'],
             uface=data['uface'],
             message_id=data['message_id'],
@@ -392,7 +392,7 @@ class LikeMessage:
         return cls(
             uname=data['uname'],
             uid=data['uid'],
-            open_id=data.get('open_id', ''),  # 还没全量上线，先用get保险
+            open_id=data['open_id'],
             uface=data['uface'],
             timestamp=data['timestamp'],
             room_id=data['room_id'],

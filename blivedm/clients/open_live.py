@@ -60,6 +60,8 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         # 在调用init_room后初始化的字段
         self._room_owner_uid: Optional[int] = None
         """主播用户ID"""
+        self._room_owner_open_id: Optional[str] = None
+        """主播Open ID"""
         self._host_server_url_list: Optional[List[str]] = []
         """弹幕服务器URL列表"""
         self._auth_body: Optional[str] = None
@@ -77,6 +79,13 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         主播用户ID，调用init_room后初始化
         """
         return self._room_owner_uid
+
+    @property
+    def room_owner_open_id(self) -> Optional[str]:
+        """
+        主播Open ID，调用init_room后初始化
+        """
+        return self._room_owner_open_id
 
     @property
     def room_owner_auth_code(self):
@@ -181,6 +190,7 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         anchor_info = data['anchor_info']
         self._room_id = anchor_info['room_id']
         self._room_owner_uid = anchor_info['uid']
+        self._room_owner_open_id = anchor_info['open_id']
         return True
 
     async def _end_game(self):
