@@ -23,10 +23,8 @@ class DanmakuMessage:
 
     uname: str = ''
     """用户昵称"""
-    uid: int = 0
-    """用户UID(即将废弃)"""
     open_id: str = ''
-    """用户唯一标识(2024-03-11后上线)"""
+    """用户唯一标识"""
     uface: str = ''
     """用户头像"""
     timestamp: int = 0
@@ -54,7 +52,6 @@ class DanmakuMessage:
     def from_command(cls, data: dict):
         return cls(
             uname=data['uname'],
-            uid=data['uid'],
             open_id=data['open_id'],
             uface=data['uface'],
             timestamp=data['timestamp'],
@@ -79,7 +76,7 @@ class AnchorInfo:
     uid: int = 0
     """收礼主播uid"""
     open_id: str = ''
-    """收礼主播唯一标识(2024-03-11后上线)"""
+    """收礼主播唯一标识"""
     uname: str = ''
     """收礼主播昵称"""
     uface: str = ''
@@ -128,10 +125,8 @@ class GiftMessage:
 
     room_id: int = 0
     """房间号"""
-    uid: int = 0
-    """送礼用户UID(即将废弃)"""
     open_id: str = ''
-    """用户唯一标识(2024-03-11后上线)"""
+    """用户唯一标识"""
     uname: str = ''
     """送礼用户昵称"""
     uface: str = ''
@@ -177,7 +172,6 @@ class GiftMessage:
 
         return cls(
             room_id=data['room_id'],
-            uid=data['uid'],
             open_id=data['open_id'],
             uname=data['uname'],
             uface=data['uface'],
@@ -205,10 +199,8 @@ class UserInfo:
     用户信息
     """
 
-    uid: int = 0
-    """用户UID(即将废弃)"""
     open_id: str = ''
-    """用户唯一标识(2024-03-11后上线)"""
+    """用户唯一标识"""
     uname: str = ''
     """用户昵称"""
     uface: str = ''
@@ -217,7 +209,6 @@ class UserInfo:
     @classmethod
     def from_dict(cls, data: dict):
         return cls(
-            uid=data['uid'],
             open_id=data['open_id'],
             uname=data['uname'],
             uface=data['uface'],
@@ -278,10 +269,8 @@ class SuperChatMessage:
 
     room_id: int = 0
     """直播间id"""
-    uid: int = 0
-    """用户UID(即将废弃)"""
     open_id: str = ''
-    """用户唯一标识(2024-03-11后上线)"""
+    """用户唯一标识"""
     uname: str = ''
     """购买的用户昵称"""
     uface: str = ''
@@ -313,7 +302,6 @@ class SuperChatMessage:
     def from_command(cls, data: dict):
         return cls(
             room_id=data['room_id'],
-            uid=data['uid'],
             open_id=data['open_id'],
             uname=data['uname'],
             uface=data['uface'],
@@ -363,10 +351,8 @@ class LikeMessage:
 
     uname: str = ''
     """用户昵称"""
-    uid: int = 0
-    """用户UID(即将废弃)"""
     open_id: str = ''
-    """用户唯一标识(2024-03-11后上线)"""
+    """用户唯一标识"""
     uface: str = ''
     """用户头像"""
     timestamp: int = 0
@@ -391,7 +377,6 @@ class LikeMessage:
     def from_command(cls, data: dict):
         return cls(
             uname=data['uname'],
-            uid=data['uid'],
             open_id=data['open_id'],
             uface=data['uface'],
             timestamp=data['timestamp'],
