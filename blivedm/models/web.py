@@ -108,6 +108,9 @@ class DanmakuMessage:
     privilege_type: int = 0
     """舰队类型，0非舰队，1总督，2提督，3舰长"""
 
+    reply_uname: str = ''
+    """回复弹幕"""
+
     @classmethod
     def from_command(cls, info: list):
         if len(info[3]) != 0:
@@ -172,6 +175,8 @@ class DanmakuMessage:
             title=title,
 
             privilege_type=info[7],
+
+            reply_uname=json.loads(info[0][15]["extra"])["reply_uname"],
         )
 
     @property
