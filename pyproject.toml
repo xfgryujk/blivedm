@@ -1,18 +1,19 @@
-[tool.poetry]
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
 name = "blivedm"
 version = "0.1.1"
+authors = [{ name = "xfgryujk" }]
 description = "Python获取bilibili直播弹幕的库，使用WebSocket协议"
-authors = ["xfgryujk"]
-license = "MIT"
 readme = "README.md"
+requires-python = ">=3.8"
+keywords = ["one", "two"]
+license = { text = "MIT" }
+classifiers = ["Programming Language :: Python :: 3"]
+dependencies = ["aiohttp~=3.9.0", "Brotli~=1.1.0", "yarl~=1.9.3"]
 
-[tool.poetry.dependencies]
-python = "^3.8"
-aiohttp = "~3.9.0"
-Brotli = "~1.1.0"
-yarl = "~1.9.3"
 
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+[project.scripts]
+my-script = "my_package.module:function"
