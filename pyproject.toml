@@ -13,7 +13,3 @@ keywords = ["one", "two"]
 license = { text = "MIT" }
 classifiers = ["Programming Language :: Python :: 3"]
 dependencies = ["aiohttp~=3.9.0", "Brotli~=1.1.0", "yarl~=1.9.3"]
-
-
-[project.scripts]
-my-script = "my_package.module:function"
