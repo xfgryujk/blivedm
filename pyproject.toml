@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "blivedm"
+version = "0.1.1"
+description = "Python获取bilibili直播弹幕的库，使用WebSocket协议"
+authors = ["xfgryujk"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+aiohttp = "~3.9.0"
+Brotli = "~1.1.0"
+yarl = "~1.9.3"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
