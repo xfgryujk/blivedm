@@ -108,6 +108,12 @@ class BaseHandler(HandlerInterface):
         ),
         # 点赞
         'LIVE_OPEN_PLATFORM_LIKE': _make_msg_callback('_on_open_live_like', open_models.LikeMessage),
+        # 进入房间
+        'LIVE_OPEN_PLATFORM_LIVE_ROOM_ENTER': _make_msg_callback('_on_open_live_enter_room', open_models.RoomEnterMessage),
+        # 开始直播
+        'LIVE_OPEN_PLATFORM_LIVE_START': _make_msg_callback('_on_open_live_start_live', open_models.LiveStartMessage),
+        # 结束直播
+        'LIVE_OPEN_PLATFORM_LIVE_END': _make_msg_callback('_on_open_live_end_live', open_models.LiveEndMessage),
     }
     """cmd -> 处理回调"""
 
@@ -196,4 +202,19 @@ class BaseHandler(HandlerInterface):
     def _on_open_live_like(self, client: ws_base.WebSocketClientBase, message: open_models.LikeMessage):
         """
         点赞
+        """
+
+    def _on_open_live_enter_room(self, client: ws_base.WebSocketClientBase, message: open_models.RoomEnterMessage):
+        """
+        进入房间
+        """
+
+    def _on_open_live_start_live(self, client: ws_base.WebSocketClientBase, message: open_models.LiveStartMessage):
+        """
+        开始直播
+        """
+
+    def _on_open_live_end_live(self, client: ws_base.WebSocketClientBase, message: open_models.LiveEndMessage):
+        """
+        结束直播
         """

@@ -71,6 +71,15 @@ class MyHandler(blivedm.BaseHandler):
     def _on_open_live_like(self, client: blivedm.OpenLiveClient, message: open_models.LikeMessage):
         print(f'[{message.room_id}] {message.uname} 点赞')
 
+    def _on_open_live_enter_room(self, client: blivedm.OpenLiveClient, message: open_models.RoomEnterMessage):
+        print(f'[{message.room_id}] {message.uname} 进入房间')
+
+    def _on_open_live_start_live(self, client: blivedm.OpenLiveClient, message: open_models.LiveStartMessage):
+        print(f'[{message.room_id}] 开始直播')
+
+    def _on_open_live_end_live(self, client: blivedm.OpenLiveClient, message: open_models.LiveEndMessage):
+        print(f'[{message.room_id}] 结束直播')
+
 
 if __name__ == '__main__':
     asyncio.run(main())
