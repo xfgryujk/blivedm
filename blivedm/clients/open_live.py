@@ -291,3 +291,16 @@ class OpenLiveClient(ws_base.WebSocketClientBase):
         发送认证包
         """
         await self._websocket.send_bytes(self._make_packet(self._auth_body, ws_base.Operation.AUTH))
+
+    def _handle_command(self, command: dict):
+        cmd = command.get('cmd', '')
+        if cmd == 'LIVE_OPEN_PLATFORM_INTERACTION_END' and command['data']['game_id'] == self._game_id:
+            # 服务器主动停止推送，可能是心跳超时，需要重新开启项目
+            logger.warning('room=%d game end by server, game_id=%s', self._room_id, self._game_id)
+
+            self._need_init_room = True
+            if self._websocket is not None and not self._websocket.closed:
+                asyncio.create_task(self._websocket.close())
+            return
+
+        super()._handle_command(command)
