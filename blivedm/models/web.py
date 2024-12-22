@@ -67,6 +67,8 @@ class DanmakuMessage:
     """用户ID"""
     uname: str = ''
     """用户名"""
+    face: str = ''
+    """用户头像URL"""
     admin: int = 0
     """是否房管"""
     vip: int = 0
@@ -110,6 +112,12 @@ class DanmakuMessage:
 
     @classmethod
     def from_command(cls, info: list):
+        mode_info = info[0][15]
+        try:
+            face = mode_info['user']['base']['face']
+        except KeyError:
+            face = ''
+
         if len(info[3]) != 0:
             medal_level = info[3][0]
             medal_name = info[3][1]
@@ -144,12 +152,13 @@ class DanmakuMessage:
             dm_type=info[0][12],
             emoticon_options=info[0][13],
             voice_config=info[0][14],
-            mode_info=info[0][15],
+            mode_info=mode_info,
 
             msg=info[1],
 
             uid=info[2][0],
             uname=info[2][1],
+            face=face,
             admin=info[2][2],
             vip=info[2][3],
             svip=info[2][4],
@@ -178,8 +187,11 @@ class DanmakuMessage:
     def emoticon_options_dict(self) -> dict:
         """
         示例：
+
+        ```
         {'bulge_display': 0, 'emoticon_unique': 'official_13', 'height': 60, 'in_player_area': 1, 'is_dynamic': 1,
          'url': 'https://i0.hdslb.com/bfs/live/a98e35996545509188fe4d24bd1a56518ea5af48.png', 'width': 183}
+         ```
         """
         if isinstance(self.emoticon_options, dict):
             return self.emoticon_options
@@ -192,17 +204,44 @@ class DanmakuMessage:
     def voice_config_dict(self) -> dict:
         """
         示例：
+
+        ```
         {'voice_url': 'https%3A%2F%2Fboss.hdslb.com%2Flive-dm-voice%2Fb5b26e48b556915cbf3312a59d3bb2561627725945.wav
          %3FX-Amz-Algorithm%3DAWS4-HMAC-SHA256%26X-Amz-Credential%3D2663ba902868f12f%252F20210731%252Fshjd%252Fs3%25
          2Faws4_request%26X-Amz-Date%3D20210731T100545Z%26X-Amz-Expires%3D600000%26X-Amz-SignedHeaders%3Dhost%26
          X-Amz-Signature%3D114e7cb5ac91c72e231c26d8ca211e53914722f36309b861a6409ffb20f07ab8',
          'file_format': 'wav', 'text': '汤，下午好。', 'file_duration': 1}
+         ```
         """
         if isinstance(self.voice_config, dict):
             return self.voice_config
         try:
             return json.loads(self.voice_config)
         except (json.JSONDecodeError, TypeError):
+            return {}
+
+    @property
+    def extra_dict(self) -> dict:
+        """
+        示例：
+
+        ```
+        {'send_from_me': False, 'mode': 0, 'color': 14893055, 'dm_type': 0, 'font_size': 25, 'player_mode': 4,
+        'show_player_type': 0, 'content': '确实', 'user_hash': '2904574201', 'emoticon_unique': '', 'bulge_display': 0,
+        'recommend_score': 5, 'main_state_dm_color': '', 'objective_state_dm_color': '', 'direction': 0,
+        'pk_direction': 0, 'quartet_direction': 0, 'anniversary_crowd': 0, 'yeah_space_type': '', 'yeah_space_url': '',
+        'jump_to_url': '', 'space_type': '', 'space_url': '', 'animation': {}, 'emots': None, 'is_audited': False,
+        'id_str': '6fa9959ab8feabcd1b337aa5066768334027', 'icon': None, 'show_reply': True, 'reply_mid': 0,
+        'reply_uname': '', 'reply_uname_color': '', 'reply_is_mystery': False, 'reply_type_enum': 0, 'hit_combo': 0,
+        'esports_jump_url': ''}
+        ```
+        """
+        try:
+            extra = self.mode_info['extra']
+            if isinstance(extra, dict):
+                return extra
+            return json.loads(extra)
+        except (KeyError, json.JSONDecodeError, TypeError):
             return {}
 
 
