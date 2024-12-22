@@ -276,7 +276,7 @@ class GuardBuyMessage:
     """用户名"""
     guard_level: int = 0
     """舰队等级，0非舰队，1总督，2提督，3舰长"""
-    num: int = 0
+    num: int = 0  # 可以理解为礼物数量？
     """数量"""
     price: int = 0
     """单价金瓜子数"""
@@ -305,6 +305,57 @@ class GuardBuyMessage:
 
 
 @dataclasses.dataclass
+class UserToastV2Message:
+    """
+    另一个上舰消息，包含的数据更多
+    """
+
+    uid: int = 0
+    """用户ID"""
+    username: str = ''
+    """用户名"""
+    guard_level: int = 0
+    """舰队等级，0非舰队，1总督，2提督，3舰长"""
+    num: int = 0  # 可以理解为礼物数量？
+    """数量"""
+    price: int = 0
+    """单价金瓜子数"""
+    unit: str = ''
+    """单位，根据开放平台的文档，正常单位为“月”，如为其他内容，无视`guard_num`以本字段内容为准，例如`*3天`"""
+    gift_id: int = 0
+    """礼物ID"""
+    start_time: int = 0
+    """开始时间戳，和结束时间戳相同"""
+    end_time: int = 0
+    """结束时间戳，和开始时间戳相同"""
+    source: int = 0
+    """猜测0是自己买的，2是别人送的，这个只影响是否播动画"""
+    toast_msg: str = ''
+    """提示信息（"<%XXX%> 在主播XXX的直播间续费了舰长，今天是TA陪伴主播的第XXX天"）"""
+
+    @classmethod
+    def from_command(cls, data: dict):
+        sender_info = data['sender_uinfo']
+        guard_info = data['guard_info']
+        pay_info = data['pay_info']
+        gift_info = data['gift_info']
+        option = data['option']
+        return cls(
+            uid=sender_info['uid'],
+            username=sender_info['base']['name'],
+            guard_level=guard_info['guard_level'],
+            num=pay_info['num'],
+            price=pay_info['price'],
+            unit=pay_info['unit'],
+            gift_id=gift_info['gift_id'],
+            start_time=guard_info['start_time'],
+            end_time=guard_info['end_time'],
+            source=option['source'],
+            toast_msg=data['toast_msg'],
+        )
+
+
+@dataclasses.dataclass
 class SuperChatMessage:
     """
     醒目留言消息
@@ -315,7 +366,7 @@ class SuperChatMessage:
     message: str = ''
     """消息"""
     message_trans: str = ''
-    """消息日文翻译（目前只出现在SUPER_CHAT_MESSAGE_JPN）"""
+    """消息日文翻译"""
     start_time: int = 0
     """开始时间戳"""
     end_time: int = 0
@@ -387,4 +438,34 @@ class SuperChatDeleteMessage:
     def from_command(cls, data: dict):
         return cls(
             ids=data['ids'],
+        )
+
+
+@dataclasses.dataclass
+class InteractWordMessage:
+    """
+    进入房间、关注主播等互动消息
+    """
+
+    uid: int = 0
+    """用户ID"""
+    username: str = ''
+    """用户名"""
+    face: str = ''
+    """用户头像URL"""
+    timestamp: int = 0
+    """时间戳"""
+    msg_type: int = 0
+    """`{1: '进入', 2: '关注了', 3: '分享了', 4: '特别关注了', 5: '互粉了', 6: '为主播点赞了'}`"""
+
+    @classmethod
+    def from_command(cls, data: dict):
+        user_info = data['uinfo']
+        user_base_info = user_info['base']
+        return cls(
+            uid=user_info['uid'],
+            username=user_base_info['name'],
+            face=user_base_info['face'],
+            timestamp=data['timestamp'],
+            msg_type=data['msg_type'],
         )
