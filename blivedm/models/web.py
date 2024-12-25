@@ -115,7 +115,7 @@ class DanmakuMessage:
         mode_info = info[0][15]
         try:
             face = mode_info['user']['base']['face']
-        except KeyError:
+        except (TypeError, KeyError):
             face = ''
 
         if len(info[3]) != 0:
