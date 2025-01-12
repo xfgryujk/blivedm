@@ -450,8 +450,8 @@ class LiveStartMessage:
     """用户唯一标识"""
     timestamp: int = 0
     """发生的时间戳"""
-    area_id: int = 0
-    """开播二级分区ID"""
+    area_name: str = ''
+    """开播二级分区名"""
     title: str = ''
     """开播时刻，直播间的标题"""
     msg_id: str = ''  # 官方文档表格里没列出这个字段，但是实际上有
@@ -463,7 +463,7 @@ class LiveStartMessage:
             room_id=data['room_id'],
             open_id=data['open_id'],
             timestamp=data['timestamp'],
-            area_id=int(data['area_id']),  # 官方文档说是int64，实际上发的是str，之后会修复成int64
+            area_name=data['area_name'],
             title=data['title'],
             msg_id=data.get('msg_id', ''),  # 官方文档表格里没列出这个字段，但是实际上有
         )
@@ -481,8 +481,8 @@ class LiveEndMessage:
     """用户唯一标识"""
     timestamp: int = 0
     """发生的时间戳"""
-    area_id: int = 0
-    """开播二级分区ID"""
+    area_name: str = ''
+    """开播二级分区名"""
     title: str = ''
     """开播时刻，直播间的标题"""
     msg_id: str = ''  # 官方文档表格里没列出这个字段，但是实际上有
@@ -494,7 +494,7 @@ class LiveEndMessage:
             room_id=data['room_id'],
             open_id=data['open_id'],
             timestamp=data['timestamp'],
-            area_id=int(data['area_id']),  # 官方文档说是int64，实际上发的是str，之后会修复成int64
+            area_name=data['area_name'],
             title=data['title'],
             msg_id=data.get('msg_id', ''),  # 官方文档表格里没列出这个字段，但是实际上有
         )
