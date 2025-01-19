@@ -110,6 +110,9 @@ class DanmakuMessage:
     privilege_type: int = 0
     """舰队类型，0非舰队，1总督，2提督，3舰长"""
 
+    wealth_level: int = 0
+    """荣耀等级"""
+
     @classmethod
     def from_command(cls, info: list):
         mode_info = info[0][15]
@@ -181,6 +184,8 @@ class DanmakuMessage:
             title=title,
 
             privilege_type=info[7],
+
+            wealth_level=info[16][0],
         )
 
     @property

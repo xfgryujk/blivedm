@@ -47,6 +47,14 @@ class DanmakuMessage:
     """表情包图片地址"""
     dm_type: int = 0
     """弹幕类型 0：普通弹幕 1：表情包弹幕"""
+    glory_level: int = 0
+    """直播荣耀等级"""
+    reply_open_id: str = ''
+    """被at用户唯一标识"""
+    reply_uname: str = ''
+    """被at的用户昵称"""
+    is_admin: int = 0
+    """发送弹幕的用户是否是房管，取值范围0或1，取值为1时是房管"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -64,6 +72,10 @@ class DanmakuMessage:
             fans_medal_level=data['fans_medal_level'],
             emoji_img_url=data['emoji_img_url'],
             dm_type=data['dm_type'],
+            glory_level=data['glory_level'],
+            reply_open_id=data['reply_open_id'],
+            reply_uname=data['reply_uname'],
+            is_admin=data['is_admin'],
         )
 
 
