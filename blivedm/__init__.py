@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-__version__ = '1.1.0-dev'
+__version__ = '1.1.0'
 
 from .handlers import *
 from .clients import *
