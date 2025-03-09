@@ -82,7 +82,7 @@ class DanmakuMessage:
     uname_color: str = ''
     """用户名颜色"""
 
-    medal_level: str = ''
+    medal_level: int = 0
     """勋章等级"""
     medal_name: str = ''
     """勋章名"""
@@ -125,14 +125,14 @@ class DanmakuMessage:
             medal_level = info[3][0]
             medal_name = info[3][1]
             runame = info[3][2]
-            room_id = info[3][3]
+            medal_room_id = info[3][3]
             mcolor = info[3][4]
             special_medal = info[3][5]
         else:
             medal_level = 0
             medal_name = ''
             runame = ''
-            room_id = 0
+            medal_room_id = 0
             mcolor = 0
             special_medal = 0
 
@@ -172,7 +172,7 @@ class DanmakuMessage:
             medal_level=medal_level,
             medal_name=medal_name,
             runame=runame,
-            medal_room_id=room_id,
+            medal_room_id=medal_room_id,
             mcolor=mcolor,
             special_medal=special_medal,
 
@@ -274,6 +274,8 @@ class GiftMessage:
     """礼物ID"""
     gift_type: int = 0
     """礼物类型（未知）"""
+    gift_img_basic: str = ''
+    """图标URL"""
     action: str = ''
     """目前遇到的有'喂食'、'赠送'"""
     price: int = 0
@@ -286,9 +288,29 @@ class GiftMessage:
     """总瓜子数"""
     tid: str = ''
     """可能是事务ID，有时和rnd相同"""
+    medal_level: int = 0
+    """勋章等级"""
+    medal_name: str = ''
+    """勋章名"""
+    medal_room_id: int = 0
+    """勋章房间ID，未登录时是0"""
+    medal_ruid: int = 0
+    """勋章主播ID"""
 
     @classmethod
     def from_command(cls, data: dict):
+        medal_info = data.get('medal_info', None)
+        if medal_info is not None:
+            medal_level = medal_info['medal_level']
+            medal_name = medal_info['medal_name']
+            medal_room_id = medal_info['anchor_roomid']
+            medal_ruid = medal_info['target_id']
+        else:
+            medal_level = 0
+            medal_name = ''
+            medal_room_id = 0
+            medal_ruid = 0
+
         return cls(
             gift_name=data['giftName'],
             num=data['num'],
@@ -299,12 +321,17 @@ class GiftMessage:
             timestamp=data['timestamp'],
             gift_id=data['giftId'],
             gift_type=data['giftType'],
+            gift_img_basic=data['gift_info']['img_basic'],
             action=data['action'],
             price=data['price'],
             rnd=data['rnd'],
             coin_type=data['coin_type'],
             total_coin=data['total_coin'],
             tid=data['tid'],
+            medal_level=medal_level,
+            medal_name=medal_name,
+            medal_room_id=medal_room_id,
+            medal_ruid=medal_ruid,
         )
 
 
@@ -443,9 +470,29 @@ class SuperChatMessage:
     """背景图URL"""
     background_price_color: str = ''
     """背景价格颜色，'#rrggbb'"""
+    medal_level: int = 0
+    """勋章等级"""
+    medal_name: str = ''
+    """勋章名"""
+    medal_room_id: int = 0
+    """勋章房间ID"""
+    medal_ruid: int = 0
+    """勋章主播ID"""
 
     @classmethod
     def from_command(cls, data: dict):
+        medal_info = data.get('medal_info', None)
+        if medal_info is not None:
+            medal_level = medal_info['medal_level']
+            medal_name = medal_info['medal_name']
+            medal_room_id = medal_info['anchor_roomid']
+            medal_ruid = medal_info['target_id']
+        else:
+            medal_level = 0
+            medal_name = ''
+            medal_room_id = 0
+            medal_ruid = 0
+
         return cls(
             price=data['price'],
             message=data['message'],
@@ -466,6 +513,10 @@ class SuperChatMessage:
             background_icon=data['background_icon'],
             background_image=data['background_image'],
             background_price_color=data['background_price_color'],
+            medal_level=medal_level,
+            medal_name=medal_name,
+            medal_room_id=medal_room_id,
+            medal_ruid=medal_ruid,
         )
 
 
