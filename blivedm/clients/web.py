@@ -17,7 +17,7 @@ logger = logging.getLogger('blivedm')
 
 UID_INIT_URL = 'https://api.bilibili.com/x/web-interface/nav'
 BUVID_INIT_URL = 'https://www.bilibili.com/'
-ROOM_INIT_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getInfoByRoom'
+ROOM_INIT_URL = 'https://api.live.bilibili.com/room/v1/Room/get_info'
 DANMAKU_SERVER_CONF_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo'
 DEFAULT_DANMAKU_SERVER_LIST = [
     {'host': 'broadcastlv.chat.bilibili.com', 'port': 2243, 'wss_port': 443, 'ws_port': 2244}
@@ -194,9 +194,8 @@ class BLiveClient(ws_base.WebSocketClientBase):
         return True
 
     def _parse_room_init(self, data):
-        room_info = data['room_info']
-        self._room_id = room_info['room_id']
-        self._room_owner_uid = room_info['uid']
+        self._room_id = data['room_id']
+        self._room_owner_uid = data['uid']
         return True
 
     async def _init_host_server(self):
