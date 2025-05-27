@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 import asyncio
+import hashlib
 import logging
-from typing import *
+import time
+from typing import Any, Dict, List, Optional, Tuple
 
 import aiohttp
 import yarl
@@ -23,7 +25,60 @@ DEFAULT_DANMAKU_SERVER_LIST = [
     {'host': 'broadcastlv.chat.bilibili.com', 'port': 2243, 'wss_port': 443, 'ws_port': 2244}
 ]
 
+MIXIN_KEY_ENC_TAB = [
+    46, 47, 18, 2, 53, 8, 23, 32, 15, 50, 10, 31, 58, 3, 45, 35, 27, 43, 5, 49,
+    33, 9, 42, 19, 29, 28, 14, 39, 12, 38, 41, 13, 37, 48, 7, 16, 24, 55, 40, 61,
+    26, 17, 0, 1, 60, 51, 30, 4, 22, 25, 54, 21, 56, 59, 6, 63, 57, 62, 11, 36,
+    20, 34, 44, 52
+]
 
+class WbiSigner:
+    @staticmethod
+    def _get_mixin_key(orig: str) -> str:
+        """对 imgKey 和 subKey 进行字符顺序打乱编码"""
+        return ''.join([orig[i] for i in MIXIN_KEY_ENC_TAB])[:32]
+
+    async def _get_wbi_keys(self, session: aiohttp.ClientSession) -> Tuple[str, str]:
+        """获取最新的 img_key 和 sub_key"""
+        async with session.get(
+            UID_INIT_URL,
+            headers={'User-Agent': utils.USER_AGENT}
+        ) as resp:
+            data = await resp.json()
+            img_url = data['data']['wbi_img']['img_url']
+            sub_url = data['data']['wbi_img']['sub_url']
+        
+        return (
+            img_url[img_url.rfind('/')+1 : img_url.rfind('.')],
+            sub_url[sub_url.rfind('/')+1 : sub_url.rfind('.')]
+        )
+
+    async def sign_params(
+        self, 
+        params: Dict[str, Any],
+        session: aiohttp.ClientSession
+    ) -> str:
+        """生成签名后的查询字符串"""
+        # 获取密钥
+        img_key, sub_key = await self._get_wbi_keys(session)
+        mixin_key = self._get_mixin_key(img_key + sub_key)
+        
+        # 添加时间戳并过滤参数
+        signed_params = params.copy()
+        signed_params['wts'] = int(time.time())
+        
+        # 过滤特殊字符并排序
+        query = []
+        for key in sorted(signed_params.keys()):
+            value = str(signed_params[key]).translate(str.maketrans("", "", "!'()*"))
+            query.append(f"{key}={value}")
+        
+        # 生成签名
+        query_str = '&'.join(query)
+        wbi_sign = hashlib.md5((query_str + mixin_key).encode()).hexdigest()
+        
+        return f"{query_str}&w_rid={wbi_sign}"
+    
 class BLiveClient(ws_base.WebSocketClientBase):
     """
     web端客户端
@@ -59,6 +114,8 @@ class BLiveClient(ws_base.WebSocketClientBase):
         """
         self._host_server_token: Optional[str] = None
         """连接弹幕服务器用的token"""
+
+        self._wbi_signer = WbiSigner() #签名器
 
     @property
     def tmp_room_id(self) -> int:
@@ -200,26 +257,34 @@ class BLiveClient(ws_base.WebSocketClientBase):
 
     async def _init_host_server(self):
         try:
+            # 构造基础参数
+            base_params = {'id': self._room_id, 'type': 0}
+            
+            # 生成签名参数
+            signed_query = await self._wbi_signer.sign_params(base_params, self._session)
+            
+            # 发送带签名的请求
             async with self._session.get(
                 DANMAKU_SERVER_CONF_URL,
                 headers={'User-Agent': utils.USER_AGENT},
-                params={
-                    'id': self._room_id,
-                    'type': 0
-                },
+                params=signed_query
             ) as res:
                 if res.status != 200:
-                    logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', self._room_id,
-                                   res.status, res.reason)
+                    logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', 
+                                 self._room_id, res.status, res.reason)
                     return False
                 data = await res.json()
                 if data['code'] != 0:
-                    logger.warning('room=%d _init_host_server() failed, message=%s', self._room_id, data['message'])
+                    logger.warning('room=%d _init_host_server() failed, message=%s', 
+                                 self._room_id, data['message'])
                     return False
                 if not self._parse_danmaku_server_conf(data['data']):
                     return False
-        except (aiohttp.ClientConnectionError, asyncio.TimeoutError):
-            logger.exception('room=%d _init_host_server() failed:', self._room_id)
+        except (aiohttp.ClientConnectionError, asyncio.TimeoutError) as e:
+            logger.exception('room=%d _init_host_server() failed: %s', self._room_id, str(e))
+            return False
+        except KeyError as e:
+            logger.error('room=%d WBI keys parse failed: %s', self._room_id, str(e))
             return False
         return True
 
