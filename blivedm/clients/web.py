@@ -6,8 +6,9 @@ from typing import *
 import aiohttp
 import yarl
 
-from . import ws_base
 from .. import utils
+from . import ws_base
+from .wbi import UID_INIT_URL, signed_query
 
 __all__ = (
     'BLiveClient',
@@ -15,7 +16,6 @@ __all__ = (
 
 logger = logging.getLogger('blivedm')
 
-UID_INIT_URL = 'https://api.bilibili.com/x/web-interface/nav'
 BUVID_INIT_URL = 'https://www.bilibili.com/'
 ROOM_INIT_URL = 'https://api.live.bilibili.com/room/v1/Room/get_info'
 DANMAKU_SERVER_CONF_URL = 'https://api.live.bilibili.com/xlive/web-room/v1/index/getDanmuInfo'
@@ -203,10 +203,10 @@ class BLiveClient(ws_base.WebSocketClientBase):
             async with self._session.get(
                 DANMAKU_SERVER_CONF_URL,
                 headers={'User-Agent': utils.USER_AGENT},
-                params={
+                params=await signed_query(self._session, {
                     'id': self._room_id,
                     'type': 0
-                },
+                }),
             ) as res:
                 if res.status != 200:
                     logger.warning('room=%d _init_host_server() failed, status=%d, reason=%s', self._room_id,
