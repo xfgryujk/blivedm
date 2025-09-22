@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
+import base64
 import dataclasses
 import json
 from typing import *
+
+from . import pb
 
 __all__ = (
     'HeartbeatMessage',
@@ -537,7 +540,7 @@ class SuperChatDeleteMessage:
 
 
 @dataclasses.dataclass
-class InteractWordMessage:
+class InteractWordV2Message:
     """
     进入房间、关注主播等互动消息
     """
@@ -555,12 +558,11 @@ class InteractWordMessage:
 
     @classmethod
     def from_command(cls, data: dict):
-        user_info = data['uinfo']
-        user_base_info = user_info['base']
+        proto = pb.InteractWordV2.loads(base64.b64decode(data['pb']))
         return cls(
-            uid=user_info['uid'],
-            username=user_base_info['name'],
-            face=user_base_info['face'],
-            timestamp=data['timestamp'],
-            msg_type=data['msg_type'],
+            uid=proto.uid,
+            username=proto.uname,
+            face=proto.uinfo.base.face,
+            timestamp=proto.timestamp,
+            msg_type=proto.msg_type,
         )
