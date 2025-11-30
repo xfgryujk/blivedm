@@ -106,7 +106,8 @@ class MyHandler(blivedm.BaseHandler):
     #     print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
 
     def _on_user_toast_v2(self, client: blivedm.BLiveClient, message: web_models.UserToastV2Message):
-        print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
+        if message.source != 2:
+            print(f'[{client.room_id}] {message.username} 上舰，guard_level={message.guard_level}')
 
     def _on_super_chat(self, client: blivedm.BLiveClient, message: web_models.SuperChatMessage):
         print(f'[{client.room_id}] 醒目留言 ¥{message.price} {message.uname}：{message.message}')

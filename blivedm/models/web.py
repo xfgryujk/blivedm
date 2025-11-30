@@ -403,9 +403,9 @@ class UserToastV2Message:
     end_time: int = 0
     """结束时间戳，和开始时间戳相同"""
     source: int = 0
-    """猜测0是自己买的，2是别人送的，这个只影响是否播动画"""
+    """猜测0是付费买的，2是赠送的。现在上舰时会先发一条0的消息再发一条2的消息，官方的评论栏不会显示2的消息"""
     toast_msg: str = ''
-    """提示信息（"<%XXX%> 在主播XXX的直播间续费了舰长，今天是TA陪伴主播的第XXX天"）"""
+    """提示信息（"<%XXX%> 在主播XXX的直播间开通了舰长，今天是TA陪伴主播的第XXX天"）"""
 
     @classmethod
     def from_command(cls, data: dict):
