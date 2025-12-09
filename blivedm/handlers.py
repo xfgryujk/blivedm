@@ -74,6 +74,11 @@ class BaseHandler(HandlerInterface):
         message.is_mirror = True
         return self._on_danmaku(client, message)
 
+    def __open_dm_mirror_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        message = open_models.DanmakuMessage.from_command(command['data'])
+        message.is_mirror = True
+        return self._on_open_live_danmaku(client, message)
+
     _CMD_CALLBACK_DICT: Dict[
         str,
         Optional[Callable[
@@ -108,6 +113,7 @@ class BaseHandler(HandlerInterface):
 
         # 弹幕
         'LIVE_OPEN_PLATFORM_DM': _make_msg_callback('_on_open_live_danmaku', open_models.DanmakuMessage),
+        'LIVE_OPEN_PLATFORM_DM_MIRROR': __open_dm_mirror_callback,
         # 礼物
         'LIVE_OPEN_PLATFORM_SEND_GIFT': _make_msg_callback('_on_open_live_gift', open_models.GiftMessage),
         # 上舰
