@@ -69,6 +69,11 @@ class BaseHandler(HandlerInterface):
     def __danmu_msg_callback(self, client: ws_base.WebSocketClientBase, command: dict):
         return self._on_danmaku(client, web_models.DanmakuMessage.from_command(command['info']))
 
+    def __danmu_msg_mirror_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        message = web_models.DanmakuMessage.from_command(command['info'])
+        message.is_mirror = True
+        return self._on_danmaku(client, message)
+
     _CMD_CALLBACK_DICT: Dict[
         str,
         Optional[Callable[
@@ -83,6 +88,7 @@ class BaseHandler(HandlerInterface):
         # 弹幕
         # go-common\app\service\live\live-dm\service\v1\send.go
         'DANMU_MSG': __danmu_msg_callback,
+        'DANMU_MSG_MIRROR': __danmu_msg_mirror_callback,
         # 礼物
         'SEND_GIFT': _make_msg_callback('_on_gift', web_models.GiftMessage),
         # 上舰

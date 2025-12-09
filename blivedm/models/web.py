@@ -62,6 +62,8 @@ class DanmakuMessage:
     """语音参数"""
     mode_info: dict = dataclasses.field(default_factory=dict)
     """一些附加参数"""
+    is_mirror: bool = False
+    """是否跨房弹幕"""
 
     msg: str = ''
     """弹幕内容"""
