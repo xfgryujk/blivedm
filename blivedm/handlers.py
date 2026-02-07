@@ -75,6 +75,7 @@ class BaseHandler(HandlerInterface):
         return self._on_danmaku(client, message)
 
     def __open_dm_mirror_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        # 跨房弹幕可能缺少一些字段，详情参考官方文档
         message = open_models.DanmakuMessage.from_command(command['data'])
         message.is_mirror = True
         return self._on_open_live_danmaku(client, message)
