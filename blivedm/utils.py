@@ -1,7 +1,7 @@
-from random_user_agent.user_agent import UserAgent
-from random_user_agent.params import SoftwareName, OperatingSystem
-
 # -*- coding: utf-8 -*-
+import random_user_agent.user_agent as ua
+import random_user_agent.params as params
+
 USER_AGENT = (
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/102.0.0.0 Safari/537.36'
 )
@@ -12,10 +12,10 @@ def randomlize_user_agent():
     返回新的User-Agent。
     """
 
-    software_names = [SoftwareName.CHROME.value]
-    operating_systems = [OperatingSystem.WINDOWS.value]
+    software_names = [params.SoftwareName.CHROME.value]
+    operating_systems = [params.OperatingSystem.WINDOWS.value]
 
-    user_agent_rotator = UserAgent(
+    user_agent_rotator = ua.UserAgent(
         software_names=software_names,
         operating_systems=operating_systems
     )
