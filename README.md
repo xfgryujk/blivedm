@@ -8,11 +8,13 @@ Python获取bilibili直播弹幕的库，使用WebSocket协议，支持web端和
 
 ## 使用说明
 
-1. 需要Python 3.8及以上版本
-2. 安装依赖
+1. 安装本包
 
     ```sh
-    pip install -r requirements.txt
+    uv add git+https://github.com/xfgryujk/blivedm.git --branch master
     ```
 
-3. web端例程在[sample.py](./sample.py)，B站直播开放平台例程在[open_live_sample.py](./open_live_sample.py)
+2. 用法参考[web端例程](./sample.py)、[B站直播开放平台例程](./open_live_sample.py)
+
+> [!NOTE]  
+> 本包没有发布到PyPI，从PyPI安装会得到错误的版本
