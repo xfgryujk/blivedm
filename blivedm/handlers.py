@@ -80,6 +80,18 @@ class BaseHandler(HandlerInterface):
         message.is_mirror = True
         return self._on_open_live_danmaku(client, message)
 
+    def __send_gift_v2_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        # SEND_GIFT_V2（2026-07 灰度）：核心数据在 pb 字段，base64 编码的 protobuf
+        data = command.get('data') or {}
+        pb_data = data.get('pb')
+        if pb_data is None and isinstance(data.get('data'), dict):
+            # 兼容多包一层 data 的结构（data.data.pb）
+            pb_data = data['data'].get('pb')
+        if not pb_data:
+            logger.warning('room=%d SEND_GIFT_V2 missing pb data, command=%s', client.room_id, command)
+            return
+        return self._on_gift(client, web_models.GiftMessage.from_command_v2(pb_data))
+
     _CMD_CALLBACK_DICT: Dict[
         str,
         Optional[Callable[
@@ -97,6 +109,8 @@ class BaseHandler(HandlerInterface):
         'DANMU_MSG_MIRROR': __danmu_msg_mirror_callback,
         # 礼物
         'SEND_GIFT': _make_msg_callback('_on_gift', web_models.GiftMessage),
+        # 礼物（2026-07 灰度的新协议，protobuf 编码）
+        'SEND_GIFT_V2': __send_gift_v2_callback,
         # 上舰
         'GUARD_BUY': _make_msg_callback('_on_buy_guard', web_models.GuardBuyMessage),
         # 另一个上舰消息

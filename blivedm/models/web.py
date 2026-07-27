@@ -16,6 +16,78 @@ __all__ = (
 )
 
 
+# protobuf wire format解析器，用于SEND_GIFT_V2
+# 不依赖pure_protobuf，跳过未知字段（SEND_GIFT_V2 的结构通过逆向所得，字段号可能有缺失）
+# 逆向端口来源（MIT License）：https://github.com/lovelyyoshino/Bilibili-Live-API/blob/master/API.live_websocket.md
+def _pb_read_varint(buf: bytes, pos: int):
+    result = 0
+    shift = 0
+    while True:
+        if pos >= len(buf):
+            raise ValueError('truncated varint')
+        b = buf[pos]
+        pos += 1
+        result |= (b & 0x7F) << shift
+        if not (b & 0x80):
+            return result, pos
+        shift += 7
+        if shift > 70:
+            raise ValueError('varint too long')
+
+
+def _pb_parse(buf: bytes) -> Dict[int, List[Tuple[int, Any]]]:
+    """解析 protobuf wire format，返回 {字段号: [(wire_type, value), ...]}，同名字段保留全部值"""
+    fields: Dict[int, List[Tuple[int, Any]]] = {}
+    pos = 0
+    n = len(buf)
+    while pos < n:
+        tag, pos = _pb_read_varint(buf, pos)
+        field_no = tag >> 3
+        wire_type = tag & 0x7
+        if wire_type == 0:  # varint
+            value, pos = _pb_read_varint(buf, pos)
+        elif wire_type == 1:  # fixed64
+            value = buf[pos:pos + 8]
+            pos += 8
+        elif wire_type == 2:  # length-delimited (string/bytes/嵌套message)
+            length, pos = _pb_read_varint(buf, pos)
+            value = buf[pos:pos + length]
+            pos += length
+        elif wire_type == 5:  # fixed32
+            value = buf[pos:pos + 4]
+            pos += 4
+        else:
+            raise ValueError(f'unsupported wire type {wire_type}')
+        fields.setdefault(field_no, []).append((wire_type, value))
+    return fields
+
+
+def _pb_varint(fields: Dict[int, list], no: int, default: int = 0) -> int:
+    items = fields.get(no)
+    if not items:
+        return default
+    wire_type, value = items[-1]
+    return value if wire_type == 0 else default
+
+
+def _pb_str(fields: Dict[int, list], no: int, default: str = '') -> str:
+    items = fields.get(no)
+    if not items:
+        return default
+    wire_type, value = items[-1]
+    if wire_type != 2:
+        return default
+    return value.decode('utf-8', errors='replace')
+
+
+def _pb_msg(fields: Dict[int, list], no: int) -> Optional[bytes]:
+    items = fields.get(no)
+    if not items:
+        return None
+    wire_type, value = items[-1]
+    return value if wire_type == 2 else None
+
+
 @dataclasses.dataclass
 class HeartbeatMessage:
     """
@@ -301,6 +373,10 @@ class GiftMessage:
     """勋章房间ID，未登录时是0"""
     medal_ruid: int = 0
     """勋章主播ID"""
+    blind_gift_name: str = ''
+    """盲盒名（如'心动盲盒'），空串表示非盲盒礼物。"""
+    blind_price: int = 0
+    """盲盒购买价（瓜子），0表示未知"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -315,6 +391,8 @@ class GiftMessage:
             medal_name = ''
             medal_room_id = 0
             medal_ruid = 0
+
+        blind_gift = data.get('blind_gift') or {}
 
         return cls(
             gift_name=data['giftName'],
@@ -337,6 +415,50 @@ class GiftMessage:
             medal_name=medal_name,
             medal_room_id=medal_room_id,
             medal_ruid=medal_ruid,
+            blind_gift_name=blind_gift.get('original_gift_name', ''),
+            blind_price=blind_gift.get('blind_price', 0),
+        )
+
+    @classmethod
+    def from_command_v2(cls, pb_data):
+        """
+        从 SEND_GIFT_V2 消息解析（2026-07 灰度的新协议，与 SEND_GIFT 语义等价）
+
+        :param pb_data: data.pb 的内容，base64 字符串或已解码的 bytes
+        """
+        if isinstance(pb_data, str):
+            pb_data = base64.b64decode(pb_data)
+
+        # 字段号依据逆向端口文档 lovelyyoshino/Bilibili-Live-API (MIT license)，缺失字段取默认值
+        # https://github.com/lovelyyoshino/Bilibili-Live-API/blob/master/API.live_websocket.md
+        top = _pb_parse(pb_data)
+        medal = _pb_parse(_pb_msg(top, 8) or b'')    # MedalInfo medal
+        blind = _pb_parse(_pb_msg(top, 9) or b'')    # BlindGift blind（仅盲盒礼物存在）
+        gift = _pb_parse(_pb_msg(top, 10) or b'')    # GiftData gift
+        effect = _pb_parse(_pb_msg(gift, 35) or b'')  # GiftEffect effect
+
+        return cls(
+            uid=_pb_varint(top, 1),
+            uname=_pb_str(top, 2),
+            face=_pb_str(top, 3),
+            medal_ruid=_pb_varint(medal, 1),      # anchor_uid
+            medal_level=_pb_varint(medal, 5),
+            medal_name=_pb_str(medal, 6),
+            guard_level=_pb_varint(medal, 11),    # ? 大航海等级（逆向推断）
+            gift_id=_pb_varint(gift, 1),
+            gift_name=_pb_str(gift, 2),
+            num=_pb_varint(gift, 3),
+            gift_type=_pb_varint(gift, 4),
+            price=_pb_varint(gift, 5),
+            total_coin=_pb_varint(gift, 6),       # 实付总价（盲盒场景为盲盒购买价）
+            coin_type=_pb_str(gift, 8),
+            tid=_pb_str(gift, 9),
+            timestamp=_pb_varint(gift, 10),
+            rnd=_pb_str(gift, 12),
+            action=_pb_str(gift, 18),
+            gift_img_basic=_pb_str(effect, 1),
+            blind_gift_name=_pb_str(blind, 3),    # original_gift_name，空串=非盲盒
+            blind_price=_pb_varint(blind, 6),     # 盲盒购买价（瓜子）
         )
 
 
