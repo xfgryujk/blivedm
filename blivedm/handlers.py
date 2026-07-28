@@ -90,7 +90,9 @@ class BaseHandler(HandlerInterface):
         if not pb_data:
             logger.warning('room=%d SEND_GIFT_V2 missing pb data, command=%s', client.room_id, command)
             return
-        return self._on_gift(client, web_models.GiftMessage.from_command_v2(pb_data))
+        # 批量开盲盒时一条 V2 消息会解析出多条 GiftMessage，逐条分发
+        for message in web_models.GiftMessage.from_command_v2(pb_data):
+            self._on_gift(client, message)
 
     _CMD_CALLBACK_DICT: Dict[
         str,
