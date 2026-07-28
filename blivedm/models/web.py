@@ -367,7 +367,7 @@ class GiftMessage:
 
         messages = []
         for gift in proto.gift:
-            # 统一total_coin的语义为礼物原本价格的实付总价，保持与旧版SEND_GIFT 义一致
+            # 统一total_coin的语义为礼物原本价格的实付总价，保持与旧版SEND_GIFT语义一致
             # 注：SEND_GIFT_V2的GiftData.total_coin是爆出礼物的总价而非原本价格，因此弃用，爆出礼物的总价可直接用price x num计算
             if blind.original_gift_name:
                 # 盲盒：该组实付总价 = discount_price（= 单盒价 x num），
