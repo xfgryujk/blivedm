@@ -53,9 +53,14 @@ class SendGiftV2MedalInfo(pb_msg.BaseMessage):
 
 @dataclasses.dataclass
 class SendGiftV2BlindGift(pb_msg.BaseMessage):
-    """仅盲盒礼物存在"""
+    """盲盒礼物字段"""
+    original_gift_id: Annotated[int, pb_anno.Field(2)] = 0
+    """盲盒本身的礼物 id"""
     original_gift_name: Annotated[str, pb_anno.Field(3)] = ''
-    blind_price: Annotated[int, pb_anno.Field(6)] = 0
+    gift_action: Annotated[str, pb_anno.Field(5)] = ''
+    """动作文案（如"爆出"）"""
+    original_gift_price: Annotated[int, pb_anno.Field(6)] = 0
+    """盲盒单盒原价（瓜子）"""
 
 
 @dataclasses.dataclass
@@ -70,11 +75,8 @@ class SendGiftV2GiftData(pb_msg.BaseMessage):
     num: Annotated[int, pb_anno.Field(3)] = 0
     gift_type: Annotated[int, pb_anno.Field(4)] = 0
     price: Annotated[int, pb_anno.Field(5)] = 0
-    # 注意：这里实测为爆出礼物的总价，而非原版中total_coin所表示的礼物原价的总价格
-    total_coin: Annotated[int, pb_anno.Field(6)] = 0
-    # ? 盲盒场景下的折算价 / 原价
-    # 实测为盲盒礼物的实付总价（盲盒原本价格）
-    discount_price: Annotated[int, pb_anno.Field(7)] = 0
+    discount_price: Annotated[int, pb_anno.Field(6)] = 0
+    total_coin: Annotated[int, pb_anno.Field(7)] = 0
     coin_type: Annotated[str, pb_anno.Field(8)] = ''
     tid: Annotated[str, pb_anno.Field(9)] = ''
     timestamp: Annotated[int, pb_anno.Field(10)] = 0

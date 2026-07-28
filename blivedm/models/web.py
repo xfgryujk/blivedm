@@ -291,7 +291,7 @@ class GiftMessage:
     coin_type: str = ''
     """瓜子类型，'silver'或'gold'，1000金瓜子 = 1元"""
     total_coin: int = 0
-    """礼物总价：普通礼物 = price x num，盲盒 = 盲盒原本价格的总价"""
+    """实付总价（瓜子）：普通礼物 = 折后单价 x num；盲盒 = 盲盒原本价格的总价（单盒价 x num）"""
     tid: str = ''
     """可能是事务ID，有时和rnd相同"""
     medal_level: int = 0
@@ -367,15 +367,13 @@ class GiftMessage:
 
         messages = []
         for gift in proto.gift:
-            # 统一total_coin的语义为礼物原本价格的实付总价，保持与旧版SEND_GIFT语义一致
-            # 注：SEND_GIFT_V2的GiftData.total_coin是爆出礼物的总价而非原本价格，因此弃用，爆出礼物的总价可直接用price x num计算
+            # 普通/打折/盲盒礼物都直接采用；缺失时按场景回退计算
             if blind.original_gift_name:
-                # 盲盒：该组实付总价 = discount_price（= 单盒价 x num），
-                # 缺失时回退 blind.blind_price（单盒价）x num
-                actual_paid = gift.discount_price or blind.blind_price * gift.num
+                # 盲盒：实付总价，缺失时回退 单盒原价(original_gift_price) x num
+                actual_paid = gift.total_coin or blind.original_gift_price * gift.num
             else:
-                # 普通礼物：实付总价 = 单价 x 数量
-                actual_paid = gift.price * gift.num
+                # 普通礼物：缺失时回退 单价 x 数量
+                actual_paid = gift.total_coin or gift.price * gift.num
 
             messages.append(cls(
                 uid=proto.uid,
@@ -390,7 +388,7 @@ class GiftMessage:
                 num=gift.num,
                 gift_type=gift.gift_type,
                 price=gift.price,
-                total_coin=actual_paid, # 礼物原价总价（盲盒=该组购买总价），与旧版语义一致
+                total_coin=actual_paid, # 礼物原价总价（盲盒=盒子原价），与旧版语义一致
                 coin_type=gift.coin_type,
                 tid=gift.tid,
                 timestamp=gift.timestamp,
