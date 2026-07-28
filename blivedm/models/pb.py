@@ -70,7 +70,11 @@ class SendGiftV2GiftData(pb_msg.BaseMessage):
     num: Annotated[int, pb_anno.Field(3)] = 0
     gift_type: Annotated[int, pb_anno.Field(4)] = 0
     price: Annotated[int, pb_anno.Field(5)] = 0
+    # 注意：这里实测为爆出礼物的总价，而非原版中total_coin所表示的礼物原价的总价格
     total_coin: Annotated[int, pb_anno.Field(6)] = 0
+    # ? 盲盒场景下的折算价 / 原价
+    # 实测为盲盒礼物的实付总价（盲盒原本价格）
+    discount_price: Annotated[int, pb_anno.Field(7)] = 0
     coin_type: Annotated[str, pb_anno.Field(8)] = ''
     tid: Annotated[str, pb_anno.Field(9)] = ''
     timestamp: Annotated[int, pb_anno.Field(10)] = 0
@@ -88,4 +92,5 @@ class SendGiftV2(pb_msg.BaseMessage):
     face: Annotated[str, pb_anno.Field(3)] = ''
     medal: Annotated[SendGiftV2MedalInfo, pb_anno.Field(8)] = dataclasses.field(default_factory=SendGiftV2MedalInfo)
     blind: Annotated[SendGiftV2BlindGift, pb_anno.Field(9)] = dataclasses.field(default_factory=SendGiftV2BlindGift)
-    gift: Annotated[SendGiftV2GiftData, pb_anno.Field(10)] = dataclasses.field(default_factory=SendGiftV2GiftData)
+    # repeated：批量开盲盒时一条消息含多个 GiftData（每种爆出的礼物一条，num 为该种数量）
+    gift: Annotated[List[SendGiftV2GiftData], pb_anno.Field(10)] = dataclasses.field(default_factory=list)

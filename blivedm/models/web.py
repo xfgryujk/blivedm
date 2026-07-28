@@ -291,7 +291,7 @@ class GiftMessage:
     coin_type: str = ''
     """瓜子类型，'silver'或'gold'，1000金瓜子 = 1元"""
     total_coin: int = 0
-    """总瓜子数"""
+    """礼物总价：普通礼物 = price x num，盲盒 = 盲盒原本价格的总价"""
     tid: str = ''
     """可能是事务ID，有时和rnd相同"""
     medal_level: int = 0
@@ -349,9 +349,12 @@ class GiftMessage:
         )
 
     @classmethod
-    def from_command_v2(cls, pb_data):
+    def from_command_v2(cls, pb_data) -> List['GiftMessage']:
         """
-        从 SEND_GIFT_V2 消息解析（2026-07 灰度的新协议，与 SEND_GIFT 语义等价）
+        从 SEND_GIFT_V2 消息解析（2026-07 灰度的新协议），返回一条或多条 GiftMessage。
+
+        批量开盲盒时一条 wire 消息携带多个 GiftData（每种爆出的礼物一条，num 为该种的数量），
+        逐条展开返回，普通送单个礼物则只有一条。
 
         :param pb_data: data.pb 的内容，base64 字符串或已解码的 bytes
         """
@@ -361,31 +364,43 @@ class GiftMessage:
         proto = pb.SendGiftV2.loads(pb_data)
         medal = proto.medal
         blind = proto.blind
-        gift = proto.gift
 
-        return cls(
-            uid=proto.uid,
-            uname=proto.uname,
-            face=proto.face,
-            medal_ruid=medal.anchor_uid,
-            medal_level=medal.medal_level,
-            medal_name=medal.medal_name,
-            guard_level=medal.guard_level,
-            gift_id=gift.gift_id,
-            gift_name=gift.gift_name,
-            num=gift.num,
-            gift_type=gift.gift_type,
-            price=gift.price,
-            total_coin=gift.total_coin,       # 实付总价（盲盒场景为盲盒购买价）
-            coin_type=gift.coin_type,
-            tid=gift.tid,
-            timestamp=gift.timestamp,
-            rnd=gift.rnd,
-            action=gift.action,
-            gift_img_basic=gift.effect.img_basic,
-            blind_gift_name=blind.original_gift_name,  # 空串=非盲盒
-            blind_price=blind.blind_price,    # 盲盒购买价（瓜子）
-        )
+        messages = []
+        for gift in proto.gift:
+            # 统一total_coin的语义为礼物原本价格的实付总价，保持与旧版SEND_GIFT 义一致
+            # 注：SEND_GIFT_V2的GiftData.total_coin是爆出礼物的总价而非原本价格，因此弃用，爆出礼物的总价可直接用price x num计算
+            if blind.original_gift_name:
+                # 盲盒：该组实付总价 = discount_price（= 单盒价 x num），
+                # 缺失时回退 blind.blind_price（单盒价）x num
+                actual_paid = gift.discount_price or blind.blind_price * gift.num
+            else:
+                # 普通礼物：实付总价 = 单价 x 数量
+                actual_paid = gift.price * gift.num
+
+            messages.append(cls(
+                uid=proto.uid,
+                uname=proto.uname,
+                face=proto.face,
+                medal_ruid=medal.anchor_uid,
+                medal_level=medal.medal_level,
+                medal_name=medal.medal_name,
+                guard_level=medal.guard_level,
+                gift_id=gift.gift_id,
+                gift_name=gift.gift_name,
+                num=gift.num,
+                gift_type=gift.gift_type,
+                price=gift.price,
+                total_coin=actual_paid, # 礼物原价总价（盲盒=该组购买总价），与旧版语义一致
+                coin_type=gift.coin_type,
+                tid=gift.tid,
+                timestamp=gift.timestamp,
+                rnd=gift.rnd,
+                action=gift.action,
+                gift_img_basic=gift.effect.img_basic,
+                blind_gift_name=blind.original_gift_name,   # 空串=非盲盒
+                blind_price=actual_paid if blind.original_gift_name else 0, # 该组盲盒实付总价（瓜子）
+            ))
+        return messages
 
 
 @dataclasses.dataclass
