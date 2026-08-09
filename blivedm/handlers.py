@@ -14,15 +14,20 @@ logger = logging.getLogger('blivedm')
 
 logged_unknown_cmds = {
     'COMBO_SEND',
+    'DM_INTERACTION',
     'ENTRY_EFFECT',
     'HOT_RANK_CHANGED',
     'HOT_RANK_CHANGED_V2',
+    'LIKE_INFO_V3_CLICK',
+    'LIKE_INFO_V3_UPDATE',
     'LIVE',
     'LIVE_INTERACTIVE_GAME',
+    'LOG_IN_NOTICE',
     'NOTICE_MSG',
     'ONLINE_RANK_COUNT',
     'ONLINE_RANK_TOP3',
     'ONLINE_RANK_V2',
+    'ONLINE_RANK_V3',
     'PK_BATTLE_END',
     'PK_BATTLE_FINAL_PROCESS',
     'PK_BATTLE_PROCESS',
@@ -30,11 +35,16 @@ logged_unknown_cmds = {
     'PK_BATTLE_SETTLE',
     'PK_BATTLE_SETTLE_USER',
     'PK_BATTLE_SETTLE_V2',
+    'POPULAR_RANK_CHANGED',
+    'POPULARITY_RED_POCKET_START',
+    'POPULARITY_RED_POCKET_V2_WINNER_LIST',
     'PREPARING',
+    'RANK_CHANGED_V2',
     'ROOM_REAL_TIME_MESSAGE_UPDATE',
     'STOP_LIVE_ROOM_LIST',
     'SUPER_CHAT_MESSAGE_JPN',
     'USER_TOAST_MSG',
+    'WATCHED_CHANGE',
     'WIDGET_BANNER',
 }
 """已打日志的未知cmd"""
@@ -81,17 +91,8 @@ class BaseHandler(HandlerInterface):
         return self._on_open_live_danmaku(client, message)
 
     def __send_gift_v2_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        # SEND_GIFT_V2（2026-07 灰度）：核心数据在 pb 字段，base64 编码的 protobuf
-        data = command.get('data') or {}
-        pb_data = data.get('pb')
-        if pb_data is None and isinstance(data.get('data'), dict):
-            # 兼容多包一层 data 的结构（data.data.pb）
-            pb_data = data['data'].get('pb')
-        if not pb_data:
-            logger.warning('room=%d SEND_GIFT_V2 missing pb data, command=%s', client.room_id, command)
-            return
-        # 批量开盲盒时一条 V2 消息会解析出多条 GiftMessage，逐条分发
-        for message in web_models.GiftMessage.from_command_v2(pb_data):
+        messages = web_models.GiftMessage.batch_from_command_v2(command['data'])
+        for message in messages:
             self._on_gift(client, message)
 
     _CMD_CALLBACK_DICT: Dict[

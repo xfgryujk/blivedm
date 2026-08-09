@@ -16,7 +16,6 @@ __all__ = (
 )
 
 
-
 @dataclasses.dataclass
 class HeartbeatMessage:
     """
@@ -285,13 +284,13 @@ class GiftMessage:
     action: str = ''
     """目前遇到的有'喂食'、'赠送'"""
     price: int = 0
-    """礼物单价瓜子数"""
+    """礼物单价瓜子数，送盲盒则是爆出礼物的单价"""
     rnd: str = ''
     """随机数，可能是去重用的。有时是时间戳+去重ID，有时是UUID"""
     coin_type: str = ''
     """瓜子类型，'silver'或'gold'，1000金瓜子 = 1元"""
     total_coin: int = 0
-    """实付总价（瓜子）：普通礼物 = 折后单价 x num；盲盒 = 盲盒原本价格的总价（单盒价 x num）"""
+    """实付总价瓜子数，普通礼物 = 折后单价 x num；盲盒 = 盲盒单价 x num"""
     tid: str = ''
     """可能是事务ID，有时和rnd相同"""
     medal_level: int = 0
@@ -303,9 +302,9 @@ class GiftMessage:
     medal_ruid: int = 0
     """勋章主播ID"""
     blind_gift_name: str = ''
-    """盲盒名（如'心动盲盒'），空串表示非盲盒礼物。"""
+    """盲盒名（如'心动盲盒'）"""
     blind_price: int = 0
-    """盲盒购买价（瓜子），0表示未知"""
+    """盲盒单价瓜子数"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -321,7 +320,13 @@ class GiftMessage:
             medal_room_id = 0
             medal_ruid = 0
 
-        blind_gift = data.get('blind_gift') or {}
+        blind_gift = data.get('blind_gift', None)
+        if blind_gift is not None:
+            blind_gift_name = blind_gift['original_gift_name']
+            blind_price = blind_gift['original_gift_price']
+        else:
+            blind_gift_name = ''
+            blind_price = 0
 
         return cls(
             gift_name=data['giftName'],
@@ -344,59 +349,41 @@ class GiftMessage:
             medal_name=medal_name,
             medal_room_id=medal_room_id,
             medal_ruid=medal_ruid,
-            blind_gift_name=blind_gift.get('original_gift_name', ''),
-            blind_price=blind_gift.get('blind_price', 0),
+            blind_gift_name=blind_gift_name,
+            blind_price=blind_price,
         )
 
     @classmethod
-    def from_command_v2(cls, pb_data) -> List['GiftMessage']:
-        """
-        从 SEND_GIFT_V2 消息解析（2026-07 灰度的新协议），返回一条或多条 GiftMessage。
-
-        批量开盲盒时一条 wire 消息携带多个 GiftData（每种爆出的礼物一条，num 为该种的数量），
-        逐条展开返回，普通送单个礼物则只有一条。
-
-        :param pb_data: data.pb 的内容，base64 字符串或已解码的 bytes
-        """
-        if isinstance(pb_data, str):
-            pb_data = base64.b64decode(pb_data)
-
-        proto = pb.SendGiftV2.loads(pb_data)
-        medal = proto.medal
-        blind = proto.blind
+    def batch_from_command_v2(cls, data: dict) -> List['GiftMessage']:
+        proto = pb.SendGiftBroadcast.loads(base64.b64decode(data['pb']))
+        medal_info = proto.medal_info
+        blind_gift = proto.blind_gift
 
         messages = []
-        for gift in proto.gift:
-            # 普通/打折/盲盒礼物都直接采用；缺失时按场景回退计算
-            if blind.original_gift_name:
-                # 盲盒：实付总价，缺失时回退 单盒原价(original_gift_price) x num
-                actual_paid = gift.total_coin or blind.original_gift_price * gift.num
-            else:
-                # 普通礼物：缺失时回退 单价 x 数量
-                actual_paid = gift.total_coin or gift.price * gift.num
-
+        for gift in proto.gift_list:
             messages.append(cls(
-                uid=proto.uid,
-                uname=proto.uname,
-                face=proto.face,
-                medal_ruid=medal.anchor_uid,
-                medal_level=medal.medal_level,
-                medal_name=medal.medal_name,
-                guard_level=medal.guard_level,
-                gift_id=gift.gift_id,
                 gift_name=gift.gift_name,
                 num=gift.num,
-                gift_type=gift.gift_type,
-                price=gift.price,
-                total_coin=actual_paid, # 礼物原价总价（盲盒=盒子原价），与旧版语义一致
-                coin_type=gift.coin_type,
-                tid=gift.tid,
+                uname=proto.uname,
+                face=proto.face,
+                guard_level=proto.guard_level,
+                uid=proto.uid,
                 timestamp=gift.timestamp,
-                rnd=gift.rnd,
+                gift_id=gift.gift_id,
+                gift_type=gift.gift_type,
+                gift_img_basic=gift.gift_info.img_basic,
                 action=gift.action,
-                gift_img_basic=gift.effect.img_basic,
-                blind_gift_name=blind.original_gift_name,   # 空串=非盲盒
-                blind_price=actual_paid if blind.original_gift_name else 0, # 该组盲盒实付总价（瓜子）
+                price=gift.price,
+                rnd=gift.rnd,
+                coin_type=gift.coin_type,
+                total_coin=gift.total_coin,
+                tid=gift.tid,
+                medal_level=medal_info.medal_level,
+                medal_name=medal_info.medal_name,
+                medal_room_id=medal_info.anchor_roomid,
+                medal_ruid=medal_info.target_id,
+                blind_gift_name=blind_gift.original_gift_name,
+                blind_price=blind_gift.original_gift_price,
             ))
         return messages
 
