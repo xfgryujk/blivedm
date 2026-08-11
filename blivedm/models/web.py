@@ -284,13 +284,13 @@ class GiftMessage:
     action: str = ''
     """目前遇到的有'喂食'、'赠送'"""
     price: int = 0
-    """礼物单价瓜子数"""
+    """礼物单价瓜子数，送盲盒则是爆出礼物的单价"""
     rnd: str = ''
     """随机数，可能是去重用的。有时是时间戳+去重ID，有时是UUID"""
     coin_type: str = ''
     """瓜子类型，'silver'或'gold'，1000金瓜子 = 1元"""
     total_coin: int = 0
-    """总瓜子数"""
+    """实付总价瓜子数，普通礼物 = 折后单价 x num；盲盒 = 盲盒单价 x num"""
     tid: str = ''
     """可能是事务ID，有时和rnd相同"""
     medal_level: int = 0
@@ -301,6 +301,10 @@ class GiftMessage:
     """勋章房间ID，未登录时是0"""
     medal_ruid: int = 0
     """勋章主播ID"""
+    blind_gift_name: str = ''
+    """盲盒名（如'心动盲盒'）"""
+    blind_price: int = 0
+    """盲盒单价瓜子数"""
 
     @classmethod
     def from_command(cls, data: dict):
@@ -315,6 +319,14 @@ class GiftMessage:
             medal_name = ''
             medal_room_id = 0
             medal_ruid = 0
+
+        blind_gift = data.get('blind_gift', None)
+        if blind_gift is not None:
+            blind_gift_name = blind_gift['original_gift_name']
+            blind_price = blind_gift['original_gift_price']
+        else:
+            blind_gift_name = ''
+            blind_price = 0
 
         return cls(
             gift_name=data['giftName'],
@@ -337,7 +349,43 @@ class GiftMessage:
             medal_name=medal_name,
             medal_room_id=medal_room_id,
             medal_ruid=medal_ruid,
+            blind_gift_name=blind_gift_name,
+            blind_price=blind_price,
         )
+
+    @classmethod
+    def batch_from_command_v2(cls, data: dict) -> List['GiftMessage']:
+        proto = pb.SendGiftBroadcast.loads(base64.b64decode(data['pb']))
+        medal_info = proto.medal_info
+        blind_gift = proto.blind_gift
+
+        messages = []
+        for gift in proto.gift_list:
+            messages.append(cls(
+                gift_name=gift.gift_name,
+                num=gift.num,
+                uname=proto.uname,
+                face=proto.face,
+                guard_level=proto.guard_level,
+                uid=proto.uid,
+                timestamp=gift.timestamp,
+                gift_id=gift.gift_id,
+                gift_type=gift.gift_type,
+                gift_img_basic=gift.gift_info.img_basic,
+                action=gift.action,
+                price=gift.price,
+                rnd=gift.rnd,
+                coin_type=gift.coin_type,
+                total_coin=gift.total_coin,
+                tid=gift.tid,
+                medal_level=medal_info.medal_level,
+                medal_name=medal_info.medal_name,
+                medal_room_id=medal_info.anchor_roomid,
+                medal_ruid=medal_info.target_id,
+                blind_gift_name=blind_gift.original_gift_name,
+                blind_price=blind_gift.original_gift_price,
+            ))
+        return messages
 
 
 @dataclasses.dataclass
