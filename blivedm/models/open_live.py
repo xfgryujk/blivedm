@@ -230,7 +230,7 @@ class GiftMessage:
         if blind_gift is None:
             blind_gift = BlindGift()
         else:
-            blind_gift = ComboInfo.from_dict(blind_gift)
+            blind_gift = BlindGift.from_dict(blind_gift)
 
         return cls(
             room_id=data['room_id'],
