@@ -38,6 +38,7 @@ logged_unknown_cmds = {
     'POPULAR_RANK_CHANGED',
     'POPULARITY_RED_POCKET_START',
     'POPULARITY_RED_POCKET_V2_WINNER_LIST',
+    'POPULARITY_RED_POCKET_WINNER_LIST',
     'PREPARING',
     'RANK_CHANGED_V2',
     'ROOM_REAL_TIME_MESSAGE_UPDATE',
@@ -64,9 +65,32 @@ class HandlerInterface:
         """
 
 
+def _get_valid_method(handler: 'BaseHandler', method_name):
+    method = getattr(handler, method_name)
+    cls = type(handler)
+    is_noop_dict = getattr(cls, '__is_noop__', None)
+    if is_noop_dict is None:
+        is_noop_dict = {}
+        cls.__is_noop__ = is_noop_dict
+
+    is_noop = is_noop_dict.get(method_name, None)
+    if is_noop is None:
+        unbound_method = getattr(method, '__func__', method)
+        base_method = getattr(BaseHandler, method_name)
+        is_noop = unbound_method is base_method
+        is_noop_dict[method_name] = is_noop
+
+    if is_noop:
+        # 基类方法无操作，就不用解析消息了
+        return None
+    return method
+
+
 def _make_msg_callback(method_name, message_cls):
     def callback(self: 'BaseHandler', client: ws_base.WebSocketClientBase, command: dict):
-        method = getattr(self, method_name)
+        method = _get_valid_method(self, method_name)
+        if method is None:
+            return None
         return method(client, message_cls.from_command(command['data']))
     return callback
 
@@ -77,23 +101,35 @@ class BaseHandler(HandlerInterface):
     """
 
     def __danmu_msg_callback(self, client: ws_base.WebSocketClientBase, command: dict):
-        return self._on_danmaku(client, web_models.DanmakuMessage.from_command(command['info']))
+        method = _get_valid_method(self, '_on_danmaku')
+        if method is None:
+            return None
+        return method(client, web_models.DanmakuMessage.from_command(command['info']))
 
     def __danmu_msg_mirror_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        method = _get_valid_method(self, '_on_danmaku')
+        if method is None:
+            return None
         message = web_models.DanmakuMessage.from_command(command['info'])
         message.is_mirror = True
-        return self._on_danmaku(client, message)
+        return method(client, message)
 
     def __open_dm_mirror_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        method = _get_valid_method(self, '_on_open_live_danmaku')
+        if method is None:
+            return None
         # 跨房弹幕可能缺少一些字段，详情参考官方文档
         message = open_models.DanmakuMessage.from_command(command['data'])
         message.is_mirror = True
-        return self._on_open_live_danmaku(client, message)
+        return method(client, message)
 
     def __send_gift_v2_callback(self, client: ws_base.WebSocketClientBase, command: dict):
+        method = _get_valid_method(self, '_on_gift')
+        if method is None:
+            return
         messages = web_models.GiftMessage.batch_from_command_v2(command['data'])
         for message in messages:
-            self._on_gift(client, message)
+            method(client, message)
 
     _CMD_CALLBACK_DICT: Dict[
         str,
